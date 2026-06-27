@@ -1,0 +1,65 @@
+name: vps_admin
+description: "VPS Admin — кишеньковий VS Code по SSH: керування VPS-серверами з телефона."
+publish_to: 'none'
+
+# versionName / versionCode для Android
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Локалізація (ARB → gen_l10n)
+  intl: ^0.19.0
+
+  cupertino_icons: ^1.0.8
+
+  # SSH + SFTP (чистий Dart, дає shell-PTY і файли)
+  dartssh2: ^2.12.0
+
+  # Рендер інтерактивного терміналу
+  xterm: ^4.0.0
+
+  # Безпечне сховище секретів (Android Keystore)
+  flutter_secure_storage: ^9.2.4
+
+  # Нечутливі налаштування + список профілів (JSON)
+  shared_preferences: ^2.5.3
+
+  # HTTP-клієнт для Anthropic Claude API
+  http: ^1.6.0
+
+  # Стан застосунку
+  provider: ^6.1.5
+
+  # Генерація id профілів
+  uuid: ^4.5.1
+
+  # Біометричний / PIN-замок на вхід (опційно вмикається)
+  local_auth: ^2.3.0
+
+  # Відкриття зовнішніх посилань (купівля Pro)
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 23
+  adaptive_icon_background: "#1E1E1E"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+
+flutter:
+  uses-material-design: true
+  generate: true
