@@ -136,6 +136,11 @@
   "sectionSecurity": "Безпека",
   "biometricLockTitle": "Замок на вхід (біометрія/PIN)",
   "biometricLockSubtitle": "Вимагати автентифікацію при відкритті додатка",
+  "sectionSupport": "Підтримати",
+  "supportNote": "VPS Admin безкоштовний. Якщо він корисний — можеш підтримати розробку.",
+  "donateMonobank": "Підтримати (monobank)",
+  "cardCopied": "Номер картки скопійовано",
+
   "sectionAbout": "Про додаток",
   "aboutSubtitle": "Кишеньковий VS Code по SSH: термінал, файли, інфо, AI.\nКеруйте своїми VPS-серверами з телефона.",
 

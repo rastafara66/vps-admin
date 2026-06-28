@@ -146,6 +146,11 @@
   "sectionSecurity": "Security",
   "biometricLockTitle": "Lock on launch (biometric/PIN)",
   "biometricLockSubtitle": "Require authentication when opening the app",
+  "sectionSupport": "Support",
+  "supportNote": "VPS Admin is free. If it helps you, you can support development.",
+  "donateMonobank": "Donate (monobank)",
+  "cardCopied": "Card number copied",
+
   "sectionAbout": "About",
   "aboutSubtitle": "Pocket VS Code over SSH: terminal, files, info, AI.\nManage your VPS servers from your phone.",
 

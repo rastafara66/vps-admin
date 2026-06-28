@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,6 +22,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Сторінка купівлі Pro (лендинг на сайті — реалізує бекенд-смуга).
   static const _buyUrl = 'https://yellow.in.ua/vps-admin';
+
+  /// Донат — банка monobank (грн; приймає й іноземні картки).
+  static const _jarUrl = 'https://send.monobank.ua/jar/DGAVuFpJW';
+  static const _jarCard = '4874 1000 3055 6727';
 
   @override
   void dispose() {
@@ -49,6 +54,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
             .showSnackBar(SnackBar(content: Text(_buyUrl)));
       }
     }
+  }
+
+  Future<void> _donate() async {
+    final uri = Uri.parse(_jarUrl);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text(_jarUrl)));
+      }
+    }
+  }
+
+  void _copyCard() {
+    Clipboard.setData(const ClipboardData(text: _jarCard));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).cardCopied)));
+  }
+
+  Widget _supportSection(AppLocalizations l) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(l.sectionSupport),
+        Text(l.supportNote, style: TextStyle(fontSize: 12, color: muted)),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: _donate,
+          icon: const Icon(Icons.favorite),
+          label: Text(l.donateMonobank),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(Icons.credit_card, size: 18, color: muted),
+            const SizedBox(width: 8),
+            const SelectableText(_jarCard,
+                style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
+            IconButton(
+              icon: const Icon(Icons.copy, size: 18),
+              tooltip: l.copy,
+              onPressed: _copyCard,
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _licenseSection(BuildContext context, AppLocalizations l) {
@@ -175,6 +227,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('VPS Admin'),
             subtitle: Text(l.aboutSubtitle),
           ),
+          const Divider(height: 32),
+          _supportSection(l),
         ],
       ),
     );

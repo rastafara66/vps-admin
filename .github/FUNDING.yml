@@ -1,7 +1,2 @@
-# Кнопка "Sponsor" на сторінці репозиторію.
-# github працює ПІСЛЯ реєстрації в GitHub Sponsors (github.com/sponsors).
-github: [rastafara66]
-
-# Для миттєвого донату без реєстрації Sponsors — розкоментуй і встав своє посилання
-# (Ko-fi / Buy Me a Coffee — міжнародні; monobank-банка — для України):
-# custom: ["https://ko-fi.com/ТВІЙ_НІК", "https://send.monobank.ua/jar/XXXX"]
+# Кнопка "Sponsor" на сторінці репозиторію → банка monobank.
+custom: ["https://send.monobank.ua/jar/DGAVuFpJW"]
