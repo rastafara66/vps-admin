@@ -2,7 +2,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:vps_admin/models.dart';
-import 'package:vps_admin/services/claude_service.dart';
+import 'package:vps_admin/services/ai_service.dart';
 
 void main() {
   test('ServerProfile серіалізується туди-назад', () {

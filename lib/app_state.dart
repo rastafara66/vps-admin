@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'license.dart';
 import 'models.dart';
 import 'seed_data.dart';
-import 'services/claude_service.dart';
+import 'services/ai_service.dart';
 import 'services/ssh_service.dart';
 import 'services/store.dart';
 
@@ -17,7 +17,7 @@ class AppState extends ChangeNotifier {
   List<ServerProfile> _servers = [];
   String? _activeId;
   bool _biometricLock = false;
-  String _claudeModel = 'claude-opus-4-8';
+  AiProvider _aiProvider = AiProvider.anthropic;
   String _localeCode = ''; // '' = за системою, інакше 'en' / 'uk'
   ThemeMode _themeMode = ThemeMode.system;
   int _homeTab = 0; // активна вкладка нижньої навігації
@@ -30,7 +30,7 @@ class AppState extends ChangeNotifier {
   List<ServerProfile> get servers => List.unmodifiable(_servers);
   String? get activeId => _activeId;
   bool get biometricLock => _biometricLock;
-  String get claudeModel => _claudeModel;
+  AiProvider get aiProvider => _aiProvider;
   String get localeCode => _localeCode;
   ThemeMode get themeMode => _themeMode;
   int get homeTab => _homeTab;
@@ -63,7 +63,7 @@ class AppState extends ChangeNotifier {
     }
     _activeId = store.activeId ?? (_servers.isNotEmpty ? _servers.first.id : null);
     _biometricLock = store.biometricLock;
-    _claudeModel = store.claudeModel;
+    _aiProvider = AiProviderX.fromWire(store.aiProvider);
     _localeCode = store.localeCode;
     _themeMode = _parseThemeMode(store.themeMode);
     notifyListeners();
@@ -124,10 +124,45 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setClaudeModel(String v) async {
-    _claudeModel = v;
-    await store.setClaudeModel(v);
+  // ── AI-провайдер ───────────────────────────────────────────────────────
+  Future<void> setAiProvider(AiProvider p) async {
+    _aiProvider = p;
+    await store.setAiProvider(p.wire);
     notifyListeners();
+  }
+
+  /// Модель для провайдера (із дефолтом, якщо не задано).
+  String aiModel(AiProvider p) {
+    final m = store.aiModel(p.wire);
+    return m.isEmpty ? p.defaultModel : m;
+  }
+
+  Future<void> setAiModel(AiProvider p, String model) async {
+    await store.setAiModel(p.wire, model.trim());
+    notifyListeners();
+  }
+
+  Future<String?> aiKey(AiProvider p) => store.loadAiKey(p.wire);
+  Future<void> setAiKey(AiProvider p, String key) =>
+      store.saveAiKey(p.wire, key.trim());
+
+  String get aiBaseUrl => store.aiBaseUrl;
+  Future<void> setAiBaseUrl(String v) async {
+    await store.setAiBaseUrl(v.trim());
+    notifyListeners();
+  }
+
+  /// Зібрати клієнт активного AI-провайдера (null, якщо ключ не заданий).
+  Future<AiClient?> aiClient() async {
+    final p = _aiProvider;
+    final key = await store.loadAiKey(p.wire);
+    if (key == null || key.trim().isEmpty) return null;
+    return AiClient(
+      provider: p,
+      apiKey: key.trim(),
+      model: aiModel(p),
+      baseUrl: p.needsBaseUrl ? store.aiBaseUrl : null,
+    );
   }
 
   /// Мова додатка: '' = за системою, 'en' / 'uk' = примусово.
@@ -150,13 +185,4 @@ class AppState extends ChangeNotifier {
         _ => ThemeMode.system,
       };
 
-  Future<String?> claudeApiKey() => store.loadClaudeApiKey();
-  Future<void> setClaudeApiKey(String key) => store.saveClaudeApiKey(key);
-
-  /// Зібрати готовий Claude-клієнт (або null, якщо ключ не заданий).
-  Future<ClaudeService?> claudeClient() async {
-    final key = await store.loadClaudeApiKey();
-    if (key == null || key.trim().isEmpty) return null;
-    return ClaudeService(apiKey: key.trim(), model: _claudeModel);
-  }
 }

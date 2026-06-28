@@ -5,8 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_state.dart';
 import '../license.dart';
+import '../services/ai_service.dart';
 
-/// Налаштування додатка: ключ Claude, модель, біометричний замок.
+/// Налаштування додатка: AI-провайдер, тема, мова, безпека, (ліцензія).
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -15,41 +16,14 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _apiKey = TextEditingController();
   final _licenseKey = TextEditingController();
-  bool _obscure = true;
-  bool _loaded = false;
   bool _activating = false;
 
   /// Сторінка купівлі Pro (лендинг на сайті — реалізує бекенд-смуга).
   static const _buyUrl = 'https://yellow.in.ua/vps-admin';
 
-  // Актуальні моделі Claude (станом на 2026).
-  static const _models = [
-    'claude-opus-4-8',
-    'claude-sonnet-4-6',
-    'claude-haiku-4-5-20251001',
-    'claude-fable-5',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final key = await context.read<AppState>().claudeApiKey();
-    if (!mounted) return;
-    setState(() {
-      _apiKey.text = key ?? '';
-      _loaded = true;
-    });
-  }
-
   @override
   void dispose() {
-    _apiKey.dispose();
     _licenseKey.dispose();
     super.dispose();
   }
@@ -143,114 +117,196 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.settingsTitle)),
-      body: !_loaded
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (kMonetizationEnabled) ...[
-                  _licenseSection(context, l),
-                  const Divider(height: 32),
-                ],
-                _SectionTitle(l.sectionAi),
-                TextField(
-                  controller: _apiKey,
-                  obscureText: _obscure,
-                  decoration: InputDecoration(
-                    labelText: 'ANTHROPIC_API_KEY',
-                    hintText: 'sk-ant-…',
-                    prefixIcon: const Icon(Icons.key),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l.apiKeyNote,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () async {
-                    await app.setClaudeApiKey(_apiKey.text.trim());
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l.keySaved)));
-                    }
-                  },
-                  icon: const Icon(Icons.save),
-                  label: Text(l.saveKey),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value:
-                      _models.contains(app.claudeModel) ? app.claudeModel : _models.first,
-                  decoration: InputDecoration(
-                    labelText: l.modelLabel,
-                    prefixIcon: const Icon(Icons.smart_toy_outlined),
-                  ),
-                  items: [
-                    for (final m in _models)
-                      DropdownMenuItem(value: m, child: Text(m)),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) app.setClaudeModel(v);
-                  },
-                ),
-                const Divider(height: 32),
-                _SectionTitle(l.sectionTheme),
-                SegmentedButton<ThemeMode>(
-                  segments: [
-                    ButtonSegment(
-                        value: ThemeMode.system,
-                        icon: const Icon(Icons.brightness_auto),
-                        label: Text(l.themeSystem)),
-                    ButtonSegment(
-                        value: ThemeMode.light,
-                        icon: const Icon(Icons.light_mode),
-                        label: Text(l.themeLight)),
-                    ButtonSegment(
-                        value: ThemeMode.dark,
-                        icon: const Icon(Icons.dark_mode),
-                        label: Text(l.themeDark)),
-                  ],
-                  selected: {app.themeMode},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (s) => app.setThemeMode(s.first),
-                ),
-                const Divider(height: 32),
-                _SectionTitle(l.sectionLanguage),
-                SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(value: '', label: Text(l.languageSystem)),
-                    const ButtonSegment(value: 'en', label: Text('English')),
-                    const ButtonSegment(value: 'uk', label: Text('Українська')),
-                  ],
-                  selected: {app.localeCode},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (s) => app.setLocaleCode(s.first),
-                ),
-                const Divider(height: 32),
-                _SectionTitle(l.sectionSecurity),
-                SwitchListTile(
-                  title: Text(l.biometricLockTitle),
-                  subtitle: Text(l.biometricLockSubtitle),
-                  value: app.biometricLock,
-                  onChanged: (v) => app.setBiometricLock(v),
-                ),
-                const Divider(height: 32),
-                _SectionTitle(l.sectionAbout),
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text('VPS Admin'),
-                  subtitle: Text(l.aboutSubtitle),
-                ),
-              ],
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (kMonetizationEnabled) ...[
+            _licenseSection(context, l),
+            const Divider(height: 32),
+          ],
+          const _AiSettings(),
+          const Divider(height: 32),
+          _SectionTitle(l.sectionTheme),
+          SegmentedButton<ThemeMode>(
+            segments: [
+              ButtonSegment(
+                  value: ThemeMode.system,
+                  icon: const Icon(Icons.brightness_auto),
+                  label: Text(l.themeSystem)),
+              ButtonSegment(
+                  value: ThemeMode.light,
+                  icon: const Icon(Icons.light_mode),
+                  label: Text(l.themeLight)),
+              ButtonSegment(
+                  value: ThemeMode.dark,
+                  icon: const Icon(Icons.dark_mode),
+                  label: Text(l.themeDark)),
+            ],
+            selected: {app.themeMode},
+            showSelectedIcon: false,
+            onSelectionChanged: (s) => app.setThemeMode(s.first),
+          ),
+          const Divider(height: 32),
+          _SectionTitle(l.sectionLanguage),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment(value: '', label: Text(l.languageSystem)),
+              const ButtonSegment(value: 'en', label: Text('English')),
+              const ButtonSegment(value: 'uk', label: Text('Українська')),
+            ],
+            selected: {app.localeCode},
+            showSelectedIcon: false,
+            onSelectionChanged: (s) => app.setLocaleCode(s.first),
+          ),
+          const Divider(height: 32),
+          _SectionTitle(l.sectionSecurity),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l.biometricLockTitle),
+            subtitle: Text(l.biometricLockSubtitle),
+            value: app.biometricLock,
+            onChanged: (v) => app.setBiometricLock(v),
+          ),
+          const Divider(height: 32),
+          _SectionTitle(l.sectionAbout),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.info_outline),
+            title: const Text('VPS Admin'),
+            subtitle: Text(l.aboutSubtitle),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Налаштування AI-провайдера (Claude / OpenAI / Gemini / OpenAI-сумісний).
+class _AiSettings extends StatefulWidget {
+  const _AiSettings();
+
+  @override
+  State<_AiSettings> createState() => _AiSettingsState();
+}
+
+class _AiSettingsState extends State<_AiSettings> {
+  late AiProvider _provider;
+  final _key = TextEditingController();
+  final _model = TextEditingController();
+  final _baseUrl = TextEditingController();
+  bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final app = context.read<AppState>();
+    _provider = app.aiProvider;
+    _baseUrl.text = app.aiBaseUrl;
+    _loadFor(_provider);
+  }
+
+  Future<void> _loadFor(AiProvider p) async {
+    final app = context.read<AppState>();
+    final key = await app.aiKey(p);
+    if (!mounted) return;
+    setState(() {
+      _key.text = key ?? '';
+      _model.text = app.aiModel(p);
+    });
+  }
+
+  Future<void> _onProvider(AiProvider p) async {
+    await context.read<AppState>().setAiProvider(p);
+    setState(() => _provider = p);
+    await _loadFor(p);
+  }
+
+  Future<void> _save() async {
+    final app = context.read<AppState>();
+    final l = AppLocalizations.of(context);
+    await app.setAiKey(_provider, _key.text.trim());
+    await app.setAiModel(_provider, _model.text.trim());
+    if (_provider.needsBaseUrl) await app.setAiBaseUrl(_baseUrl.text.trim());
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.keySaved)));
+    }
+  }
+
+  @override
+  void dispose() {
+    _key.dispose();
+    _model.dispose();
+    _baseUrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(l.sectionAi),
+        DropdownButtonFormField<AiProvider>(
+          value: _provider,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: l.aiProviderLabel,
+            prefixIcon: const Icon(Icons.smart_toy_outlined),
+          ),
+          items: [
+            for (final p in AiProvider.values)
+              DropdownMenuItem(value: p, child: Text(p.label)),
+          ],
+          onChanged: (p) {
+            if (p != null) _onProvider(p);
+          },
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _key,
+          obscureText: _obscure,
+          decoration: InputDecoration(
+            labelText: 'API key',
+            hintText: _provider.keyHint,
+            prefixIcon: const Icon(Icons.key),
+            suffixIcon: IconButton(
+              icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+              onPressed: () => setState(() => _obscure = !_obscure),
             ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _model,
+          decoration: InputDecoration(
+            labelText: l.modelLabel,
+            hintText: _provider.defaultModel,
+            prefixIcon: const Icon(Icons.tune),
+          ),
+        ),
+        if (_provider.needsBaseUrl) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: _baseUrl,
+            decoration: InputDecoration(
+              labelText: l.aiBaseUrlLabel,
+              hintText: 'https://host:11434/v1',
+              prefixIcon: const Icon(Icons.link),
+            ),
+          ),
+        ],
+        const SizedBox(height: 6),
+        Text(l.apiKeyNote, style: TextStyle(fontSize: 12, color: muted)),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: _save,
+          icon: const Icon(Icons.save),
+          label: Text(l.saveKey),
+        ),
+      ],
     );
   }
 }

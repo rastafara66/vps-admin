@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 import '../models.dart';
-import '../services/claude_service.dart';
+import '../services/ai_service.dart';
 import '../services/ssh_service.dart';
 import '../theme.dart';
 import 'settings_screen.dart';
@@ -33,7 +33,8 @@ class _AiTabState extends State<AiTab> {
   }
 
   Future<void> _checkKey() async {
-    final key = await context.read<AppState>().claudeApiKey();
+    final app = context.read<AppState>();
+    final key = await app.aiKey(app.aiProvider);
     if (mounted) setState(() => _hasKey = key != null && key.trim().isNotEmpty);
   }
 
@@ -48,7 +49,7 @@ class _AiTabState extends State<AiTab> {
     final text = _input.text.trim();
     if (text.isEmpty || _sending) return;
     final app = context.read<AppState>();
-    final client = await app.claudeClient();
+    final client = await app.aiClient();
     if (client == null) {
       if (mounted) _snack(AppLocalizations.of(context).setApiKeyFirst);
       return;

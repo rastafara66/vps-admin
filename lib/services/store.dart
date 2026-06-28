@@ -13,12 +13,15 @@ class Store {
   static const _kActiveId = 'active_server_id';
   static const _kSeeded = 'seeded_v1';
   static const _kBiometric = 'biometric_lock';
-  static const _kClaudeModel = 'claude_model';
   static const _kLocale = 'app_locale';
   static const _kThemeMode = 'theme_mode';
+  static const _kAiProvider = 'ai_provider';
+  static const _kAiBaseUrl = 'ai_base_url';
+  static const _kAiKeyPrefix = 'ai_key_'; // + provider wire (secure)
+  static const _kAiModelPrefix = 'ai_model_'; // + provider wire (prefs)
 
   static const _kSecretPrefix = 'secret_';
-  static const _kClaudeApiKey = 'claude_api_key';
+  static const _kClaudeApiKey = 'claude_api_key'; // legacy (міграція в anthropic)
   static const _kDeviceId = 'device_id';
   static const _kLicenseKey = 'license_key';
   static const _kEntitlement = 'entitlement';
@@ -67,9 +70,28 @@ class Store {
   bool get biometricLock => _prefs.getBool(_kBiometric) ?? false;
   Future<void> setBiometricLock(bool v) => _prefs.setBool(_kBiometric, v);
 
-  String get claudeModel =>
-      _prefs.getString(_kClaudeModel) ?? 'claude-opus-4-8';
-  Future<void> setClaudeModel(String v) => _prefs.setString(_kClaudeModel, v);
+  // ── AI-провайдер ─────────────────────────────────────────────────────
+  String get aiProvider => _prefs.getString(_kAiProvider) ?? 'anthropic';
+  Future<void> setAiProvider(String wire) => _prefs.setString(_kAiProvider, wire);
+
+  String get aiBaseUrl => _prefs.getString(_kAiBaseUrl) ?? '';
+  Future<void> setAiBaseUrl(String v) => _prefs.setString(_kAiBaseUrl, v);
+
+  String aiModel(String wire) => _prefs.getString('$_kAiModelPrefix$wire') ?? '';
+  Future<void> setAiModel(String wire, String v) =>
+      _prefs.setString('$_kAiModelPrefix$wire', v);
+
+  /// Ключ провайдера (secure). Для anthropic — міграція зі старого 'claude_api_key'.
+  Future<String?> loadAiKey(String wire) async {
+    final v = await _secure.read(key: '$_kAiKeyPrefix$wire');
+    if ((v == null || v.isEmpty) && wire == 'anthropic') {
+      return _secure.read(key: _kClaudeApiKey);
+    }
+    return v;
+  }
+
+  Future<void> saveAiKey(String wire, String key) =>
+      _secure.write(key: '$_kAiKeyPrefix$wire', value: key);
 
   // '' = за системою (default), 'en' / 'uk' = примусово
   String get localeCode => _prefs.getString(_kLocale) ?? '';
@@ -94,10 +116,6 @@ class Store {
 
   Future<void> deleteSecret(String serverId) =>
       _secure.delete(key: '$_kSecretPrefix$serverId');
-
-  Future<String?> loadClaudeApiKey() => _secure.read(key: _kClaudeApiKey);
-  Future<void> saveClaudeApiKey(String key) =>
-      _secure.write(key: _kClaudeApiKey, value: key);
 
   // ── Ліцензія ─────────────────────────────────────────────────────────
   /// Стабільний ідентифікатор пристрою (для прив'язки активацій).
