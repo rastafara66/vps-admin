@@ -3,18 +3,17 @@
 Manage your VPS servers from your Android phone: terminal, files, server info and an
 AI assistant — in one app. Your SSH keys never leave your device.
 
-> **Open-core.** This repository is the free core. Pro features (license activation,
-> unlimited servers, alerts) live in a private module and ship in the official build.
+> **Free and open.** Unlimited servers, all features, no subscription, no account.
 
 ## Features
 
 | Tab | What it does |
 |-----|--------------|
-| **Servers** | Add / edit / delete VPS profiles, pick the active one, connect. Free: 1 server. |
+| **Servers** | Add / edit / delete VPS profiles, pick the active one, connect. As many as you like. |
 | **Info** | Live dashboard: hostname/kernel, uptime, `free -h`, `df -h`, top processes, `docker ps`. |
 | **Terminal** | Full interactive SSH shell (`dartssh2` + `xterm`) with helper keys. |
 | **Files** | SFTP browser; open a text file in the editor and save it back. |
-| **AI** | Chat with Claude; commands in ```` ```bash ```` blocks run over SSH on confirmation. |
+| **AI** | Chat with Claude (bring your own Anthropic API key); commands in ```` ```bash ```` blocks run over SSH on confirmation. |
 | **Actions** | One-tap buttons for common commands. |
 
 Light/dark theme (follows system), English + Ukrainian.
@@ -31,6 +30,11 @@ Flutter · [`dartssh2`](https://pub.dev/packages/dartssh2) (SSH shell + SFTP) ·
   Android Keystore via `flutter_secure_storage` — never in git, never in plain prefs.
 - Optional biometric / PIN lock on launch.
 
+## Install
+
+Grab the latest APK from **[Releases](https://github.com/rastafara66/vps-admin/releases/latest)**,
+open it on Android and allow install from unknown sources. Min Android 7 (SDK 23).
+
 ## Build
 
 ```bash
@@ -39,14 +43,6 @@ flutter run            # connected device / emulator
 flutter build apk --release
 ```
 
-Min Android SDK 23.
-
-## Free vs Pro
-
-The free build is limited to **1 server**. Pro (paid license key) unlocks unlimited
-servers and upcoming features (threshold alerts, history). Buy & enter the key in
-**Settings → License**.
-
 ## License
 
-Source-available. Pro module and branding are proprietary. (OSS license for the core — TBD.)
+Source-available. See the repository for details.
