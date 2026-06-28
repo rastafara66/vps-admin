@@ -57,10 +57,9 @@ class ServersTab extends StatelessWidget {
                         PopupMenuItem(value: 'delete', child: Text(l.delete)),
                       ],
                     ),
-                    // Тап по підключеному сервері → відкрити його «Інфо»;
-                    // інакше — просто зробити активним.
-                    onTap: () =>
-                        isConnected ? app.goToTab(1) : app.setActive(s.id),
+                    // Тап: підключений → відкрити «Інфо»; інакше — зробити
+                    // активним і одразу підключитися.
+                    onTap: () => _onTapServer(context, app, ssh, s, isConnected),
                   ),
                 );
               },
@@ -97,6 +96,20 @@ class ServersTab extends StatelessWidget {
       case 'delete':
         if (context.mounted) await _confirmDelete(context, app, s);
         break;
+    }
+  }
+
+  Future<void> _onTapServer(BuildContext context, AppState app, SshService ssh,
+      ServerProfile s, bool isConnected) async {
+    if (isConnected) {
+      app.goToTab(1); // вже підключений → Інфо
+      return;
+    }
+    await app.setActive(s.id);
+    await app.connectActive();
+    if (ssh.error != null && context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(ssh.error!)));
     }
   }
 

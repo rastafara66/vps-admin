@@ -151,7 +151,9 @@ class _TerminalViewState extends State<_TerminalView> {
           child: TerminalView(
             _terminal,
             controller: _controller,
-            autofocus: true,
+            // НЕ autofocus: інакше термінал у фоновій вкладці (IndexedStack)
+            // хапає фокус одразу після підключення й вискакує клавіатура.
+            autofocus: false,
             backgroundOpacity: 1,
             padding: const EdgeInsets.all(6),
           ),

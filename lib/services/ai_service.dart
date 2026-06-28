@@ -21,11 +21,22 @@ extension AiProviderX on AiProvider {
         AiProvider.custom => 'OpenAI-сумісний (свій)',
       };
 
-  String get defaultModel => switch (this) {
-        AiProvider.anthropic => 'claude-opus-4-8',
-        AiProvider.openai => 'gpt-4o',
-        AiProvider.gemini => 'gemini-2.0-flash',
-        AiProvider.custom => 'llama3.1',
+  String get defaultModel => suggestedModels.first;
+
+  /// Поширені моделі для швидкого вибору (можна вписати й будь-яку свою).
+  List<String> get suggestedModels => switch (this) {
+        AiProvider.anthropic => const [
+            'claude-opus-4-8',
+            'claude-sonnet-4-6',
+            'claude-haiku-4-5-20251001',
+          ],
+        AiProvider.openai => const ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
+        AiProvider.gemini => const [
+            'gemini-2.0-flash',
+            'gemini-2.5-pro',
+            'gemini-1.5-flash',
+          ],
+        AiProvider.custom => const ['llama3.1', 'qwen2.5', 'mistral'],
       };
 
   /// Де взяти ключ (підказка в налаштуваннях).

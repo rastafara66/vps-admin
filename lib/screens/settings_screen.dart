@@ -341,6 +341,21 @@ class _AiSettingsState extends State<_AiSettings> {
             prefixIcon: const Icon(Icons.tune),
           ),
         ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final m in _provider.suggestedModels)
+              ActionChip(
+                label: Text(m, style: const TextStyle(fontSize: 12)),
+                onPressed: () {
+                  setState(() => _model.text = m);
+                  context.read<AppState>().setAiModel(_provider, m);
+                },
+              ),
+          ],
+        ),
         if (_provider.needsBaseUrl) ...[
           const SizedBox(height: 12),
           TextField(

@@ -113,6 +113,15 @@
   "qaRestartTitle": "Restart prod Odoo",
   "qaRestartDesc": "docker compose restart (odoo-prod) — affects the live site!",
 
+  "qaTopMem": "Top processes (RAM)",
+  "qaPorts": "Listening ports",
+  "qaFailed": "Failed services",
+  "qaLastLogins": "Recent logins",
+  "qaPublicIp": "Public IP",
+  "qaUpdates": "Updates available",
+  "qaUpgrade": "Update & upgrade",
+  "qaReboot": "Reboot server",
+
   "settingsTitle": "Settings",
   "sectionAi": "AI (Anthropic Claude)",
   "apiKeyNote": "The key is stored in the Android Keystore (flutter_secure_storage), not in git or plain preferences.",
