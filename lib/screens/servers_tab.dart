@@ -18,6 +18,7 @@ class ServersTab extends StatefulWidget {
 
 class _ServersTabState extends State<ServersTab> {
   String _query = '';
+  final Set<String> _collapsed = {};
 
   @override
   Widget build(BuildContext context) {
@@ -79,11 +80,20 @@ class _ServersTabState extends State<ServersTab> {
     final showHeaders = !(keys.length == 1 && keys.first.isEmpty);
     final widgets = <Widget>[];
     for (final k in keys) {
+      final collapsed = _collapsed.contains(k);
       if (showHeaders) {
-        widgets.add(_GroupHeader(k.isEmpty ? l.noFolder : k));
+        widgets.add(GroupHeader(
+          text: k.isEmpty ? l.noFolder : k,
+          count: groups[k]!.length,
+          collapsed: collapsed,
+          onTap: () => setState(
+              () => collapsed ? _collapsed.remove(k) : _collapsed.add(k)),
+        ));
       }
-      for (final s in groups[k]!) {
-        widgets.add(_serverCard(context, app, ssh, l, s));
+      if (!showHeaders || !collapsed) {
+        for (final s in groups[k]!) {
+          widgets.add(_serverCard(context, app, ssh, l, s));
+        }
       }
     }
     return widgets;
@@ -237,31 +247,6 @@ class _SearchField extends StatelessWidget {
           isDense: true,
           border: const OutlineInputBorder(),
         ),
-      ),
-    );
-  }
-}
-
-/// Заголовок групи (теки).
-class _GroupHeader extends StatelessWidget {
-  final String text;
-  const _GroupHeader(this.text);
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-      child: Row(
-        children: [
-          Icon(Icons.folder_outlined,
-              size: 16, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 6),
-          Text(text.toUpperCase(),
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                  color: Theme.of(context).colorScheme.primary)),
-        ],
       ),
     );
   }

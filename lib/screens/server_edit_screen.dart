@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets.dart';
 
 /// Форма додавання / редагування VPS-сервера + секрет.
 class ServerEditScreen extends StatefulWidget {
@@ -81,11 +82,14 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
           ),
         ],
       ),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: Form(
+              key: _form,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
             _field(_name, l.fieldName, hint: l.fieldNameHint, icon: Icons.label),
             _field(_host, l.fieldHost, icon: Icons.lan, validator: (v) => _required(l, v)),
             Row(
@@ -156,14 +160,12 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.save),
-              label: Text(l.save),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+          SaveBar(label: l.save, onSave: _save),
+        ],
       ),
     );
   }

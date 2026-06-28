@@ -30,6 +30,7 @@ class _ActionsState extends State<_Actions> {
   CommandResult? _result;
   QuickAction? _lastAction;
   String _query = '';
+  final Set<String> _collapsed = {};
 
   Future<void> _run(QuickAction a) async {
     final l = AppLocalizations.of(context);
@@ -170,9 +171,20 @@ class _ActionsState extends State<_Actions> {
     final showHeaders = !(keys.length == 1 && keys.first.isEmpty);
     final widgets = <Widget>[];
     for (final k in keys) {
-      if (showHeaders) widgets.add(_GroupHeader(k.isEmpty ? l.noFolder : k));
-      for (final a in groups[k]!) {
-        widgets.add(_actionCard(context, l, a));
+      final collapsed = _collapsed.contains(k);
+      if (showHeaders) {
+        widgets.add(GroupHeader(
+          text: k.isEmpty ? l.noFolder : k,
+          count: groups[k]!.length,
+          collapsed: collapsed,
+          onTap: () => setState(
+              () => collapsed ? _collapsed.remove(k) : _collapsed.add(k)),
+        ));
+      }
+      if (!showHeaders || !collapsed) {
+        for (final a in groups[k]!) {
+          widgets.add(_actionCard(context, l, a));
+        }
       }
     }
     return widgets;
@@ -244,26 +256,3 @@ class _ActionsState extends State<_Actions> {
   }
 }
 
-class _GroupHeader extends StatelessWidget {
-  final String text;
-  const _GroupHeader(this.text);
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-      child: Row(
-        children: [
-          Icon(Icons.folder_outlined,
-              size: 16, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 6),
-          Text(text.toUpperCase(),
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                  color: Theme.of(context).colorScheme.primary)),
-        ],
-      ),
-    );
-  }
-}

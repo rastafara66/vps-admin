@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets.dart';
 
 /// Додавання / редагування користувацької швидкої дії (скрипта).
 class ActionEditScreen extends StatefulWidget {
@@ -70,11 +71,14 @@ class _ActionEditScreenState extends State<ActionEditScreen> {
           IconButton(icon: const Icon(Icons.save), tooltip: l.save, onPressed: _save),
         ],
       ),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: Form(
+              key: _form,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
             TextFormField(
               controller: _title,
               decoration: InputDecoration(
@@ -115,14 +119,12 @@ class _ActionEditScreenState extends State<ActionEditScreen> {
               value: _dangerous,
               onChanged: (v) => setState(() => _dangerous = v),
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.save),
-              label: Text(l.save),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+          SaveBar(label: l.save, onSave: _save),
+        ],
       ),
     );
   }

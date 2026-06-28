@@ -11,6 +11,83 @@ import 'theme.dart';
 String authLabel(AppLocalizations l, AuthType auth) =>
     auth == AuthType.password ? l.authPassword : l.authKey;
 
+/// Заголовок теки (групи): тап згортає/розгортає вміст.
+class GroupHeader extends StatelessWidget {
+  final String text;
+  final int count;
+  final bool collapsed;
+  final VoidCallback onTap;
+  const GroupHeader({
+    super.key,
+    required this.text,
+    required this.count,
+    required this.collapsed,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme.primary;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+        child: Row(
+          children: [
+            Icon(collapsed ? Icons.chevron_right : Icons.expand_more,
+                size: 20, color: c),
+            const SizedBox(width: 4),
+            Icon(Icons.folder_outlined, size: 16, color: c),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(text.toUpperCase(),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      color: c)),
+            ),
+            Text('$count',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Закріплена внизу панель із кнопкою «Зберегти» — завжди видима
+/// (на будь-якій орієнтації), піднімається над клавіатурою.
+class SaveBar extends StatelessWidget {
+  final String label;
+  final VoidCallback onSave;
+  const SaveBar({super.key, required this.label, required this.onSave});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8,
+      color: Theme.of(context).colorScheme.surface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onSave,
+              icon: const Icon(Icons.save),
+              label: Text(label),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Обгортка, що вимагає активного SSH-з'єднання.
 /// Якщо не підключені — показує заглушку з кнопкою «Підключитися».
 class RequireConnection extends StatelessWidget {
