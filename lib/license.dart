@@ -1,5 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+/// Глобальний перемикач монетизації.
+/// `false` — додаток повністю безкоштовний: без ліміту серверів і без Pro-UI.
+/// Повернути `true`, щоб знову увімкнути модель free(1 сервер) → Pro.
+const bool kMonetizationEnabled = false;
+
 /// Рівень ліцензії.
 enum LicenseTier { free, pro }
 
@@ -55,8 +60,8 @@ abstract class LicenseService extends ChangeNotifier {
   Entitlement get entitlement;
   bool get isPro => entitlement.isPro;
 
-  /// Скільки серверів дозволено (free = 1, pro = без обмежень).
-  int get maxServers => isPro ? 1000000 : 1;
+  /// Скільки серверів дозволено. Поки монетизацію вимкнено — без обмежень.
+  int get maxServers => (isPro || !kMonetizationEnabled) ? 1000000 : 1;
 
   /// Чи можна підтримує цей білд активацію Pro (тобто наявний приватний модуль).
   bool get supportsActivation;

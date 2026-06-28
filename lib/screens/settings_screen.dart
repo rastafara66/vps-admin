@@ -148,8 +148,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _licenseSection(context, l),
-                const Divider(height: 32),
+                if (kMonetizationEnabled) ...[
+                  _licenseSection(context, l),
+                  const Divider(height: 32),
+                ],
                 _SectionTitle(l.sectionAi),
                 TextField(
                   controller: _apiKey,
