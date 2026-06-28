@@ -114,6 +114,10 @@ class Store {
   String get themeMode => _prefs.getString(_kThemeMode) ?? 'system';
   Future<void> setThemeMode(String v) => _prefs.setString(_kThemeMode, v);
 
+  // 'notify' (default) | 'off' | 'auto'
+  String get updateMode => _prefs.getString('update_mode') ?? 'notify';
+  Future<void> setUpdateMode(String v) => _prefs.setString('update_mode', v);
+
   // ── Секрети ────────────────────────────────────────────────────────────
   Future<ServerSecret?> loadSecret(String serverId) async {
     final raw = await _secure.read(key: '$_kSecretPrefix$serverId');

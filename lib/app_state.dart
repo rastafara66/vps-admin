@@ -199,6 +199,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Режим оновлень: 'off' | 'notify' | 'auto'.
+  String get updateMode => store.updateMode;
+  Future<void> setUpdateMode(String v) async {
+    await store.setUpdateMode(v);
+    notifyListeners();
+  }
+
   /// Тема: system / light / dark.
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;

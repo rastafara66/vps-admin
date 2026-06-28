@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../license.dart';
 import '../services/ai_service.dart';
+import '../services/update_service.dart';
+import 'update_dialog.dart';
 
 /// Налаштування додатка: AI-провайдер, тема, мова, безпека, (ліцензія).
 class SettingsScreen extends StatefulWidget {
@@ -103,6 +105,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  bool _checking = false;
+
+  Future<void> _checkUpdates() async {
+    final l = AppLocalizations.of(context);
+    setState(() => _checking = true);
+    final info = await UpdateService.check();
+    if (!mounted) return;
+    setState(() => _checking = false);
+    if (info != null) {
+      await showUpdateDialog(context, info);
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.upToDate)));
+    }
+  }
+
+  Widget _updatesSection(AppLocalizations l, AppState app) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(l.sectionUpdates),
+        SegmentedButton<String>(
+          segments: [
+            ButtonSegment(value: 'off', label: Text(l.updateOff)),
+            ButtonSegment(value: 'notify', label: Text(l.updateNotify)),
+            ButtonSegment(value: 'auto', label: Text(l.updateAuto)),
+          ],
+          selected: {app.updateMode},
+          showSelectedIcon: false,
+          onSelectionChanged: (s) => app.setUpdateMode(s.first),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: _checking ? null : _checkUpdates,
+              icon: _checking
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.system_update),
+              label: Text(l.checkUpdates),
+            ),
+            const SizedBox(width: 12),
+            FutureBuilder<String>(
+              future: UpdateService.currentVersion(),
+              builder: (_, snap) => Text(
+                snap.hasData ? l.currentVersion(snap.data!) : '',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _licenseSection(BuildContext context, AppLocalizations l) {
     final license = context.watch<LicenseService>();
     final isPro = license.isPro;
@@ -177,6 +239,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Divider(height: 32),
           ],
           const _AiSettings(),
+          const Divider(height: 32),
+          _updatesSection(l, app),
           const Divider(height: 32),
           _SectionTitle(l.sectionTheme),
           SegmentedButton<ThemeMode>(

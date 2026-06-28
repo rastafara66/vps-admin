@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 import '../services/ssh_service.dart';
+import '../services/update_service.dart';
 import '../theme.dart';
 import 'ai_tab.dart';
 import 'files_tab.dart';
@@ -12,6 +13,7 @@ import 'quick_actions_tab.dart';
 import 'servers_tab.dart';
 import 'settings_screen.dart';
 import 'terminal_tab.dart';
+import 'update_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +31,22 @@ class _HomeScreenState extends State<HomeScreen> {
     AiTab(),
     QuickActionsTab(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoCheckUpdates());
+  }
+
+  /// Перевірка оновлень при старті (якщо не вимкнено в налаштуваннях).
+  Future<void> _autoCheckUpdates() async {
+    if (!mounted) return;
+    final app = context.read<AppState>();
+    if (app.updateMode == 'off') return;
+    final info = await UpdateService.check();
+    if (info == null || !mounted) return;
+    await showUpdateDialog(context, info, autoStart: app.updateMode == 'auto');
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -2,8 +2,9 @@ name: vps_admin
 description: "VPS Admin — кишеньковий VS Code по SSH: керування VPS-серверами з телефона."
 publish_to: 'none'
 
-# versionName / versionCode для Android
-version: 1.0.0+1
+# versionName / versionCode для Android. ВАЖЛИВО: тримати в синхроні з тегом
+# релізу (vX.Y.Z) — за versionName працює перевірка авто-оновлення.
+version: 1.0.6+6
 
 environment:
   sdk: ^3.7.2
@@ -45,6 +46,11 @@ dependencies:
 
   # Відкриття зовнішніх посилань (купівля Pro)
   url_launcher: ^6.3.2
+
+  # Авто-оновлення: версія застосунку + завантаження й відкриття APK
+  package_info_plus: ^8.1.2
+  path_provider: ^2.1.5
+  open_filex: ^4.5.0
 
 dev_dependencies:
   flutter_test:

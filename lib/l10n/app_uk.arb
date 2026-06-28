@@ -149,6 +149,18 @@
   "activationOk": "Pro активовано ✓",
   "activationFailed": "Помилка активації: {error}",
 
+  "sectionUpdates": "Оновлення",
+  "updateOff": "Вимк.",
+  "updateNotify": "Сповіщати",
+  "updateAuto": "Авто",
+  "checkUpdates": "Перевірити зараз",
+  "currentVersion": "Версія {v}",
+  "updateAvailable": "Доступна версія {v}",
+  "upToDate": "У вас найновіша версія",
+  "updateNow": "Оновити",
+  "downloading": "Завантаження…",
+  "updateCheckFailed": "Не вдалося перевірити оновлення",
+
   "sectionTheme": "Тема",
   "themeSystem": "Системна",
   "themeLight": "Світла",
