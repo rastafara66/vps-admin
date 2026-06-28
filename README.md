@@ -13,7 +13,7 @@ AI assistant — in one app. Your SSH keys never leave your device.
 | **Info** | Live dashboard: hostname/kernel, uptime, `free -h`, `df -h`, top processes, `docker ps`. |
 | **Terminal** | Full interactive SSH shell (`dartssh2` + `xterm`) with helper keys. |
 | **Files** | SFTP browser; open a text file in the editor and save it back. |
-| **AI** | Chat with Claude (bring your own Anthropic API key); commands in ```` ```bash ```` blocks run over SSH on confirmation. |
+| **AI** | Chat with an AI assistant — Claude, ChatGPT, Gemini or any OpenAI-compatible endpoint (bring your own key); commands in ```` ```bash ```` blocks run over SSH on confirmation. |
 | **Actions** | One-tap buttons for common commands. |
 
 Light/dark theme (follows system), English + Ukrainian.
