@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'license.dart';
 import 'models.dart';
@@ -15,6 +16,7 @@ class AppState extends ChangeNotifier {
   final LicenseService license;
 
   List<ServerProfile> _servers = [];
+  List<QuickAction> _customActions = [];
   String? _activeId;
   bool _biometricLock = false;
   AiProvider _aiProvider = AiProvider.anthropic;
@@ -61,6 +63,7 @@ class AppState extends ChangeNotifier {
     } else {
       _servers = store.loadProfiles();
     }
+    _customActions = store.loadCustomActions();
     _activeId = store.activeId ?? (_servers.isNotEmpty ? _servers.first.id : null);
     _biometricLock = store.biometricLock;
     _aiProvider = AiProviderX.fromWire(store.aiProvider);
@@ -108,6 +111,30 @@ class AppState extends ChangeNotifier {
   }
 
   Future<ServerSecret?> secretFor(String id) => store.loadSecret(id);
+
+  // ── Швидкі дії ───────────────────────────────────────────────────────
+  /// Усі дії: вбудовані (seed) + користувацькі.
+  List<QuickAction> quickActions(AppLocalizations l) =>
+      [...seedQuickActions(l), ..._customActions];
+
+  Future<void> addCustomAction(QuickAction a) async {
+    _customActions.add(a);
+    await store.saveCustomActions(_customActions);
+    notifyListeners();
+  }
+
+  Future<void> updateCustomAction(QuickAction a) async {
+    final i = _customActions.indexWhere((e) => e.id == a.id);
+    if (i >= 0) _customActions[i] = a;
+    await store.saveCustomActions(_customActions);
+    notifyListeners();
+  }
+
+  Future<void> deleteCustomAction(String id) async {
+    _customActions.removeWhere((e) => e.id == id);
+    await store.saveCustomActions(_customActions);
+    notifyListeners();
+  }
 
   /// Підключитися до активного сервера.
   Future<void> connectActive() async {

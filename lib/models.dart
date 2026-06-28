@@ -23,6 +23,9 @@ class ServerProfile {
   AuthType auth;
   String defaultDir;
 
+  /// Тека (група) сервера. Порожня = без теки.
+  String group;
+
   ServerProfile({
     String? id,
     required this.name,
@@ -31,6 +34,7 @@ class ServerProfile {
     required this.username,
     this.auth = AuthType.key,
     this.defaultDir = '/home/ubuntu',
+    this.group = '',
   }) : id = id ?? _uuid.v4();
 
   ServerProfile copy() => ServerProfile(
@@ -41,6 +45,7 @@ class ServerProfile {
         username: username,
         auth: auth,
         defaultDir: defaultDir,
+        group: group,
       );
 
   Map<String, dynamic> toJson() => {
@@ -51,6 +56,7 @@ class ServerProfile {
         'username': username,
         'auth': auth.wire,
         'defaultDir': defaultDir,
+        'group': group,
       };
 
   factory ServerProfile.fromJson(Map<String, dynamic> j) => ServerProfile(
@@ -61,6 +67,7 @@ class ServerProfile {
         username: j['username'] as String? ?? 'root',
         auth: AuthTypeX.fromWire(j['auth'] as String?),
         defaultDir: j['defaultDir'] as String? ?? '/home/ubuntu',
+        group: j['group'] as String? ?? '',
       );
 
   String get displayTarget => '$username@$host:$port';
@@ -98,6 +105,8 @@ class ServerSecret {
 
 /// Готова «швидка дія» — кнопка з командою.
 class QuickAction {
+  /// null — вбудована (seed) дія; непорожній id — користувацька (редагована).
+  final String? id;
   final String title;
   final String description;
   final String command;
@@ -105,12 +114,51 @@ class QuickAction {
   /// Деструктивна / важка дія — вимагає підтвердження в UI.
   final bool dangerous;
 
+  /// Тека (група). Порожня = без теки.
+  final String group;
+
   const QuickAction({
+    this.id,
     required this.title,
     required this.description,
     required this.command,
     this.dangerous = false,
+    this.group = '',
   });
+
+  bool get isCustom => id != null;
+
+  factory QuickAction.create({
+    required String title,
+    required String command,
+    bool dangerous = false,
+    String group = '',
+  }) =>
+      QuickAction(
+        id: _uuid.v4(),
+        title: title,
+        description: command,
+        command: command,
+        dangerous: dangerous,
+        group: group,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'command': command,
+        'dangerous': dangerous,
+        'group': group,
+      };
+
+  factory QuickAction.fromJson(Map<String, dynamic> j) => QuickAction(
+        id: j['id'] as String? ?? _uuid.v4(),
+        title: j['title'] as String? ?? '',
+        description: j['command'] as String? ?? '',
+        command: j['command'] as String? ?? '',
+        dangerous: j['dangerous'] as bool? ?? false,
+        group: j['group'] as String? ?? '',
+      );
 }
 
 /// Повідомлення в AI-чаті.

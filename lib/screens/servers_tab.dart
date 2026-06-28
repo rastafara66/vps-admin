@@ -9,8 +9,15 @@ import '../widgets.dart';
 import 'server_edit_screen.dart';
 import 'settings_screen.dart';
 
-class ServersTab extends StatelessWidget {
+class ServersTab extends StatefulWidget {
   const ServersTab({super.key});
+
+  @override
+  State<ServersTab> createState() => _ServersTabState();
+}
+
+class _ServersTabState extends State<ServersTab> {
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -19,56 +26,101 @@ class ServersTab extends StatelessWidget {
     final servers = app.servers;
     final l = AppLocalizations.of(context);
 
+    final q = _query.trim().toLowerCase();
+    final filtered = q.isEmpty
+        ? servers
+        : servers
+            .where((s) =>
+                s.name.toLowerCase().contains(q) ||
+                s.host.toLowerCase().contains(q) ||
+                s.group.toLowerCase().contains(q))
+            .toList();
+
     return Scaffold(
       body: servers.isEmpty
           ? const _Empty()
-          : ListView.builder(
-              padding: const EdgeInsets.only(bottom: 88, top: 4),
-              itemCount: servers.length,
-              itemBuilder: (context, i) {
-                final s = servers[i];
-                final isActive = s.id == app.activeId;
-                final isConnected =
-                    isActive && ssh.connectedServerId == s.id && ssh.isConnected;
-                return Card(
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.dns,
-                      color: isConnected
-                          ? const Color(0xFF4EC9B0)
-                          : (isActive ? Theme.of(context).colorScheme.primary : null),
-                    ),
-                    title: Text(s.name),
-                    subtitle: Text(
-                      '${s.displayTarget}\n${authLabel(l, s.auth)} · ${s.defaultDir}',
-                    ),
-                    isThreeLine: true,
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (v) => _onMenu(context, app, ssh, s, v),
-                      itemBuilder: (_) => [
-                        if (!isActive)
-                          PopupMenuItem(value: 'activate', child: Text(l.makeActive)),
-                        if (isActive && !isConnected)
-                          PopupMenuItem(value: 'connect', child: Text(l.connect)),
-                        if (isConnected)
-                          PopupMenuItem(
-                              value: 'disconnect', child: Text(l.disconnect)),
-                        PopupMenuItem(value: 'edit', child: Text(l.edit)),
-                        PopupMenuItem(value: 'delete', child: Text(l.delete)),
-                      ],
-                    ),
-                    // Тап: підключений → відкрити «Інфо»; інакше — зробити
-                    // активним і одразу підключитися.
-                    onTap: () => _onTapServer(context, app, ssh, s, isConnected),
-                  ),
-                );
-              },
+          : Column(
+              children: [
+                if (servers.length > 3) _SearchField(
+                  hint: l.searchServers,
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(child: Text(l.nothingFound))
+                      : ListView(
+                          padding: const EdgeInsets.only(bottom: 88, top: 4),
+                          children: _grouped(context, app, ssh, l, filtered),
+                        ),
+                ),
+              ],
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () =>
             app.canAddServer ? _edit(context, null) : _showUpgrade(context),
         icon: const Icon(Icons.add),
         label: Text(l.addVps),
+      ),
+    );
+  }
+
+  List<Widget> _grouped(BuildContext context, AppState app, SshService ssh,
+      AppLocalizations l, List<ServerProfile> list) {
+    final groups = <String, List<ServerProfile>>{};
+    for (final s in list) {
+      groups.putIfAbsent(s.group, () => []).add(s);
+    }
+    final keys = groups.keys.toList()
+      ..sort((a, b) {
+        if (a.isEmpty) return 1;
+        if (b.isEmpty) return -1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
+    final showHeaders = !(keys.length == 1 && keys.first.isEmpty);
+    final widgets = <Widget>[];
+    for (final k in keys) {
+      if (showHeaders) {
+        widgets.add(_GroupHeader(k.isEmpty ? l.noFolder : k));
+      }
+      for (final s in groups[k]!) {
+        widgets.add(_serverCard(context, app, ssh, l, s));
+      }
+    }
+    return widgets;
+  }
+
+  Widget _serverCard(BuildContext context, AppState app, SshService ssh,
+      AppLocalizations l, ServerProfile s) {
+    final isActive = s.id == app.activeId;
+    final isConnected =
+        isActive && ssh.connectedServerId == s.id && ssh.isConnected;
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          Icons.dns,
+          color: isConnected
+              ? const Color(0xFF4EC9B0)
+              : (isActive ? Theme.of(context).colorScheme.primary : null),
+        ),
+        title: Text(s.name),
+        subtitle: Text(
+          '${s.displayTarget}\n${authLabel(l, s.auth)} · ${s.defaultDir}',
+        ),
+        isThreeLine: true,
+        trailing: PopupMenuButton<String>(
+          onSelected: (v) => _onMenu(context, app, ssh, s, v),
+          itemBuilder: (_) => [
+            if (!isActive)
+              PopupMenuItem(value: 'activate', child: Text(l.makeActive)),
+            if (isActive && !isConnected)
+              PopupMenuItem(value: 'connect', child: Text(l.connect)),
+            if (isConnected)
+              PopupMenuItem(value: 'disconnect', child: Text(l.disconnect)),
+            PopupMenuItem(value: 'edit', child: Text(l.edit)),
+            PopupMenuItem(value: 'delete', child: Text(l.delete)),
+          ],
+        ),
+        onTap: () => _onTapServer(context, app, ssh, s, isConnected),
       ),
     );
   }
@@ -164,6 +216,54 @@ class ServersTab extends StatelessWidget {
       ),
     );
     if (ok == true) await app.deleteServer(s.id);
+  }
+}
+
+/// Пошукове поле над списком.
+class _SearchField extends StatelessWidget {
+  final String hint;
+  final ValueChanged<String> onChanged;
+  const _SearchField({required this.hint, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: TextField(
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: const Icon(Icons.search),
+          isDense: true,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Заголовок групи (теки).
+class _GroupHeader extends StatelessWidget {
+  final String text;
+  const _GroupHeader(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      child: Row(
+        children: [
+          Icon(Icons.folder_outlined,
+              size: 16, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 6),
+          Text(text.toUpperCase(),
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                  color: Theme.of(context).colorScheme.primary)),
+        ],
+      ),
+    );
   }
 }
 

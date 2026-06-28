@@ -21,6 +21,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
   late final TextEditingController _port;
   late final TextEditingController _user;
   late final TextEditingController _dir;
+  late final TextEditingController _group;
   final _password = TextEditingController();
   final _key = TextEditingController();
   final _passphrase = TextEditingController();
@@ -39,6 +40,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
     _port = TextEditingController(text: '${e?.port ?? 22}');
     _user = TextEditingController(text: e?.username ?? 'ubuntu');
     _dir = TextEditingController(text: e?.defaultDir ?? '/home/ubuntu');
+    _group = TextEditingController(text: e?.group ?? '');
     _auth = e?.auth ?? AuthType.key;
     if (e != null) _loadSecret(e.id);
   }
@@ -58,7 +60,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name, _host, _port, _user, _dir, _password, _key, _passphrase]) {
+    for (final c in [_name, _host, _port, _user, _dir, _group, _password, _key, _passphrase]) {
       c.dispose();
     }
     super.dispose();
@@ -104,6 +106,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
               ],
             ),
             _field(_dir, l.fieldStartDir, icon: Icons.folder_open),
+            _field(_group, l.fieldGroup, icon: Icons.folder_outlined),
             const SizedBox(height: 8),
             SegmentedButton<AuthType>(
               segments: [
@@ -211,6 +214,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
       username: _user.text.trim(),
       auth: _auth,
       defaultDir: _dir.text.trim().isEmpty ? '/' : _dir.text.trim(),
+      group: _group.text.trim(),
     );
 
     ServerSecret? secret;

@@ -15,6 +15,7 @@ class Store {
   static const _kBiometric = 'biometric_lock';
   static const _kLocale = 'app_locale';
   static const _kThemeMode = 'theme_mode';
+  static const _kCustomActions = 'custom_actions';
   static const _kAiProvider = 'ai_provider';
   static const _kAiBaseUrl = 'ai_base_url';
   static const _kAiKeyPrefix = 'ai_key_'; // + provider wire (secure)
@@ -56,6 +57,18 @@ class Store {
     final raw = jsonEncode(profiles.map((e) => e.toJson()).toList());
     return _prefs.setString(_kProfiles, raw);
   }
+
+  // ── Користувацькі швидкі дії ─────────────────────────────────────────
+  List<QuickAction> loadCustomActions() {
+    final raw = _prefs.getString(_kCustomActions);
+    if (raw == null || raw.isEmpty) return [];
+    return (jsonDecode(raw) as List)
+        .map((e) => QuickAction.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveCustomActions(List<QuickAction> actions) => _prefs.setString(
+      _kCustomActions, jsonEncode(actions.map((e) => e.toJson()).toList()));
 
   String? get activeId => _prefs.getString(_kActiveId);
   Future<void> setActiveId(String? id) async {
