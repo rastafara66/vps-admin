@@ -49,3 +49,6 @@ app.*.map.json
 .dart_tool/
 .idea/
 *.iml
+
+# release APKs (live in GitHub Releases, not in git)
+*.apk
