@@ -60,8 +60,12 @@ abstract class LicenseService extends ChangeNotifier {
   Entitlement get entitlement;
   bool get isPro => entitlement.isPro;
 
+  /// Умовно «без обмежень» — стеля, якої реальний список серверів не досягне.
+  static const int unlimitedServers = 1 << 30;
+
   /// Скільки серверів дозволено. Поки монетизацію вимкнено — без обмежень.
-  int get maxServers => (isPro || !kMonetizationEnabled) ? 1000000 : 1;
+  int get maxServers =>
+      (isPro || !kMonetizationEnabled) ? unlimitedServers : 1;
 
   /// Чи можна підтримує цей білд активацію Pro (тобто наявний приватний модуль).
   bool get supportsActivation;
