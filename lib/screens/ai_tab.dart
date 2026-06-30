@@ -10,7 +10,7 @@ import '../services/ssh_service.dart';
 import '../theme.dart';
 import 'settings_screen.dart';
 
-/// Чат із Claude. AI може пропонувати команди у ```bash блоках;
+/// Чат із AI-помічником. AI може пропонувати команди у ```bash блоках;
 /// під кожним блоком — кнопка «Виконати» (по SSH, із підтвердженням).
 class AiTab extends StatefulWidget {
   const AiTab({super.key});

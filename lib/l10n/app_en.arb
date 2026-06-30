@@ -91,8 +91,8 @@
   "runCommandTitle": "Run command?",
   "aiNeedKey": "To use AI, choose a provider and set its API key in Settings.",
   "aiSettingsBtn": "AI settings",
-  "aiEmptyHint": "Ask Claude about the server, request a command or diagnostics.\nCommands in ```bash``` blocks can be run over SSH with one tap.",
-  "messageHint": "Message to Claude…",
+  "aiEmptyHint": "Ask the AI assistant about the server, request a command or diagnostics.\nCommands in ```bash``` blocks can be run over SSH with one tap.",
+  "messageHint": "Message…",
   "execResult": "Execution result:",
   "noOutput": "(no output)",
 
@@ -138,7 +138,7 @@
   "qaReboot": "Reboot server",
 
   "settingsTitle": "Settings",
-  "sectionAi": "AI (Anthropic Claude)",
+  "sectionAi": "AI assistant",
   "apiKeyNote": "The key is stored in the Android Keystore (flutter_secure_storage), not in git or plain preferences.",
   "saveKey": "Save key",
   "keySaved": "Key saved ✓",
