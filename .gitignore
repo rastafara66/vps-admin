@@ -52,3 +52,6 @@ app.*.map.json
 
 # release APKs (live in GitHub Releases, not in git)
 *.apk
+
+# Claude Code local settings (personal, not for the public repo)
+.claude/settings.local.json
