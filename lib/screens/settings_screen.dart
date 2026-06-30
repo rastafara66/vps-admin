@@ -8,6 +8,7 @@ import '../app_state.dart';
 import '../license.dart';
 import '../services/ai_service.dart';
 import '../services/update_service.dart';
+import 'help_screen.dart';
 import 'update_dialog.dart';
 
 /// Налаштування додатка: AI-провайдер, тема, мова, безпека, (ліцензія).
@@ -290,6 +291,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.info_outline),
             title: const Text('VPS Admin'),
             subtitle: Text(l.aboutSubtitle),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.help_outline),
+            title: Text(l.helpTitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HelpScreen()),
+            ),
           ),
           const Divider(height: 32),
           _supportSection(l),

@@ -8,6 +8,7 @@ import '../services/update_service.dart';
 import '../theme.dart';
 import 'ai_tab.dart';
 import 'files_tab.dart';
+import 'help_screen.dart';
 import 'info_tab.dart';
 import 'quick_actions_tab.dart';
 import 'servers_tab.dart';
@@ -81,6 +82,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           _ConnButton(app: app, ssh: ssh),
+          IconButton(
+            tooltip: l.help,
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HelpScreen()),
+            ),
+          ),
           IconButton(
             tooltip: l.settings,
             icon: const Icon(Icons.settings),

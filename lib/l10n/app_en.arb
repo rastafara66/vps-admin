@@ -196,5 +196,36 @@
   "noConnectionTo": "No connection to «{name}».",
   "@noConnectionTo": { "placeholders": { "name": {} } },
   "connectToServer": "Connect to {name}",
-  "@connectToServer": { "placeholders": { "name": {} } }
+  "@connectToServer": { "placeholders": { "name": {} } },
+
+  "help": "Help",
+  "helpTitle": "Help & guide",
+  "helpIntro": "A short guide to each part of the app. Tap a section to expand it. Text and commands can be selected and copied.",
+
+  "helpServersTitle": "Servers",
+  "helpServersBody": "On the «Servers» tab tap «Add VPS» and fill in:\n• Name — any label (e.g. «Oracle prod»).\n• Host — the server IP or domain.\n• Port — the SSH port (22 by default).\n• User — the Linux login (root, ubuntu, …).\n• Start directory — the folder opened first in Files.\n• Folder — an optional group to organise servers.\nPick an authentication method: Password or SSH key. Tap a server to make it active, then use the link icon in the top bar to connect.",
+
+  "helpSshTitle": "SSH keys — how and where to get them",
+  "helpSshBody": "You can log in two ways:\n\n1) Password — just enter the server password.\n\n2) SSH key (recommended) — you paste your PRIVATE key into the app.\n\nWhere to get a key:\n• Cloud providers (Oracle Cloud, AWS, Hetzner…) let you download a private key (a .pem / .key file) when you create the instance — open that file in a text editor and copy everything.\n• Or generate your own on a computer:\n      ssh-keygen -t ed25519 -C \"vps-admin\"\n  This creates two files: id_ed25519 (private) and id_ed25519.pub (public).\n\nPut the PUBLIC key on the server once:\n      ssh-copy-id user@host\n  or append the contents of id_ed25519.pub to ~/.ssh/authorized_keys on the server.\n\nIn the app: choose «SSH key», open your private key file and paste its FULL text — including the\n-----BEGIN … PRIVATE KEY----- and -----END … PRIVATE KEY----- lines. If the key has a passphrase, enter it in the «Key passphrase» field.\n\nThe key is stored only in the Android Keystore and never leaves your device or goes into git.",
+
+  "helpInfoTitle": "Info (metrics)",
+  "helpInfoBody": "A live dashboard for the active server: hostname and kernel, uptime and load, memory (free -h), disk (df -h), the top processes by CPU and running Docker containers. Tap Refresh to update. Requires an active SSH connection.",
+
+  "helpTerminalTitle": "Terminal",
+  "helpTerminalBody": "A full interactive SSH shell, like a terminal on your computer. The helper key row gives quick access to keys that are awkward on a phone (Tab, Ctrl, arrows, …). Use Paste to insert clipboard text. The session needs an active connection; if it drops, tap «Try again».",
+
+  "helpFilesTitle": "Files (SFTP)",
+  "helpFilesBody": "An SFTP file browser for the server. Tap a folder to open it, «Up» to go back. Tap a text file to open it in the built-in editor and save changes back to the server. Binary or very large files are not opened in the editor. Requires an active connection.",
+
+  "helpAiTitle": "AI assistant",
+  "helpAiBody": "Chat with an AI assistant about your server. Choose a provider in Settings → AI and paste its API key:\n• Claude (Anthropic) — console.anthropic.com → API keys\n• ChatGPT (OpenAI) — platform.openai.com → API keys\n• Gemini (Google) — aistudio.google.com → API key\n• OpenAI-compatible (OpenRouter, Groq, Ollama…) — your service's key plus a Base URL ending in /v1.\n\nThe assistant replies in your language. When it suggests a command it puts it in a code block with a «Run» button — the command runs over SSH only after you confirm. The AI key is stored in the Android Keystore.",
+
+  "helpActionsTitle": "Quick actions",
+  "helpActionsBody": "One-tap buttons for common commands (disk usage, listening ports, restart a service…). The app ships with a set of ready actions; add your own with «Add action», give it a command and a folder, and mark heavy or destructive ones to require confirmation. Actions run on the active server over SSH.",
+
+  "helpSecurityTitle": "Security",
+  "helpSecurityBody": "All secrets — SSH passwords, private keys and AI API keys — are stored only in the Android Keystore via flutter_secure_storage. They are never written to plain settings or git, and never leave your device. Enable «Lock on launch» in Settings to require biometric/PIN authentication every time the app opens.",
+
+  "helpUpdatesTitle": "Updates",
+  "helpUpdatesBody": "New versions are published on GitHub Releases. In Settings → Updates choose: Off (no checking), Notify (tell me when an update exists) or Auto (download and start the install automatically). «Check now» checks immediately. Installing the APK always asks for your confirmation in the Android installer."
 }
