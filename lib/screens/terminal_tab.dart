@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -10,6 +9,7 @@ import 'package:xterm/xterm.dart';
 
 import '../app_state.dart';
 import '../services/ssh_service.dart';
+import '../shell_link.dart';
 import '../terminal_keys.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -34,7 +34,9 @@ class _TerminalView extends StatefulWidget {
 class _TerminalViewState extends State<_TerminalView> {
   final Terminal _terminal = Terminal(maxLines: 10000);
   final TerminalController _controller = TerminalController();
-  SSHSession? _session;
+  /// Відкритий shell. Після закриття каналу в нього нічого не йде —
+  /// інакше OpenSSH рве все з'єднання (див. ShellLink).
+  ShellLink? _link;
   StreamSubscription? _subOut;
   StreamSubscription? _subErr;
   bool _starting = true;
@@ -50,7 +52,7 @@ class _TerminalViewState extends State<_TerminalView> {
   void initState() {
     super.initState();
     _terminal.onOutput = _onTerminalOutput;
-    _terminal.onResize = (w, h, pw, ph) => _session?.resizeTerminal(w, h);
+    _terminal.onResize = (w, h, pw, ph) => _link?.resize(w, h);
     // Після першого кадру — інакше AppLocalizations.of(context) в _start
     // кидає виняток (dependOnInheritedWidget до завершення initState).
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
@@ -68,7 +70,8 @@ class _TerminalViewState extends State<_TerminalView> {
         width: _terminal.viewWidth,
         height: _terminal.viewHeight,
       );
-      _session = session;
+      final link = ShellLink.ssh(session);
+      _link = link;
 
       _subOut = session.stdout.listen((data) {
         _terminal.write(utf8.decode(data, allowMalformed: true));
@@ -86,14 +89,16 @@ class _TerminalViewState extends State<_TerminalView> {
       );
       if (startup.isNotEmpty) _send(startup);
 
-      unawaited(session.done.then((_) {
-        if (!mounted || !identical(_session, session)) return;
+      void onEnded() {
+        if (!mounted || !identical(_link, link)) return;
         _terminal.write('\r\n$endedMsg\r\n');
         setState(() {
           _ended = true;
           _ctrlArmed = false;
         });
-      }));
+      }
+
+      unawaited(session.done.then((_) => onEnded(), onError: (_) => onEnded()));
 
       if (mounted) {
         setState(() {
@@ -128,11 +133,9 @@ class _TerminalViewState extends State<_TerminalView> {
     await _subErr?.cancel();
     _subOut = null;
     _subErr = null;
-    final s = _session;
-    _session = null;
-    try {
-      s?.close();
-    } catch (_) {}
+    final link = _link;
+    _link = null;
+    link?.close();
   }
 
   /// Усе, що вводить користувач (клавіатура, вставка) і що відповідає
@@ -146,9 +149,7 @@ class _TerminalViewState extends State<_TerminalView> {
     _send(data);
   }
 
-  void _send(String text) {
-    _session?.write(Uint8List.fromList(utf8.encode(text)));
-  }
+  void _send(String text) => _link?.send(text);
 
   /// Клавіша з панелі (стрілки, Tab, Esc) — з урахуванням режиму програми
   /// (vim/tmux перемикають стрілки на інші послідовності) і натиснутої Ctrl.
@@ -172,9 +173,7 @@ class _TerminalViewState extends State<_TerminalView> {
   void dispose() {
     _subOut?.cancel();
     _subErr?.cancel();
-    try {
-      _session?.close();
-    } catch (_) {}
+    _link?.close();
     _controller.dispose();
     super.dispose();
   }

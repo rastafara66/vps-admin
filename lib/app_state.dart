@@ -57,7 +57,9 @@ class AppState extends ChangeNotifier {
 
   Future<void> init() async {
     if (!store.isSeeded) {
-      _servers = seedServers();
+      // Копія, а не сам список: seedServers() публічного ядра — `const []`,
+      // і перший «Зберегти» на свіжій установці падав (add у незмінний список).
+      _servers = [...seedServers()];
       await store.saveProfiles(_servers);
       await store.markSeeded();
     } else {

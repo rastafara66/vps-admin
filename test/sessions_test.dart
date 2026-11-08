@@ -1,5 +1,6 @@
 // Постійні сесії (tmux/screen), команда при відкритті терміналу, клавіша Ctrl
 // і «публічне ядро без особистого»: юніт-тести без плагінів і без мережі.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:vps_admin/models.dart';
 import 'package:vps_admin/seed_data.dart';
+import 'package:vps_admin/shell_link.dart';
 import 'package:vps_admin/terminal_keys.dart';
 
 void main() {
@@ -106,6 +108,66 @@ void main() {
       expect(ctrlChar('й'), isNull);
       expect(ctrlChar('ab'), isNull);
       expect(ctrlChar(''), isNull);
+    });
+  });
+
+  // 08.11.2026 на планшеті: exit у Терміналі → клавіатура сховалась → розмір
+  // вікна пішов у закритий канал → OpenSSH розірвав УСЕ з'єднання
+  // («server_input_channel_req: unknown channel»).
+  group('ShellLink — після закриття каналу в нього нічого не йде', () {
+    late List<String> calls;
+    late Completer<void> done;
+    late ShellLink link;
+    setUp(() {
+      calls = [];
+      done = Completer<void>();
+      link = ShellLink(
+        write: (d) => calls.add('write ${String.fromCharCodes(d)}'),
+        resize: (w, h) => calls.add('resize $w x $h'),
+        close: () => calls.add('close'),
+        done: done.future,
+      );
+    });
+
+    test('поки канал відкритий — усе проходить', () {
+      link.send('ls\n');
+      link.resize(100, 30);
+      expect(calls, ['write ls\n', 'resize 100 x 30']);
+    });
+
+    test('сервер закрив канал — ні введення, ні розміру, ні повторного close', () async {
+      done.complete();
+      await Future<void>.delayed(Duration.zero);
+      link.send('x');
+      link.resize(100, 30);
+      link.close();
+      expect(link.isOpen, isFalse);
+      expect(calls, isEmpty);
+    });
+
+    test('завершення з помилкою теж закриває', () async {
+      done.completeError(StateError('transport'));
+      await Future<void>.delayed(Duration.zero);
+      link.resize(1, 1);
+      expect(calls, isEmpty);
+    });
+
+    test('у застосунку розмір shell міняє лише ShellLink', () {
+      final offenders = Directory('lib')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart') && !f.path.endsWith('shell_link.dart'))
+          .where((f) => f.readAsStringSync().contains('resizeTerminal('))
+          .map((f) => f.path)
+          .toList();
+      expect(offenders, isEmpty, reason: 'напряму в канал — ризик розриву з\'єднання');
+    });
+
+    test('наше закриття — один раз, далі тиша', () {
+      link.close();
+      link.close();
+      link.send('x');
+      expect(calls, ['close']);
     });
   });
 

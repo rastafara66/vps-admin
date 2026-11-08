@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:vps_admin/models.dart';
 import 'package:vps_admin/services/ssh_service.dart';
+import 'package:vps_admin/shell_link.dart';
 import 'package:vps_admin/terminal_keys.dart';
 
 void main() {
@@ -95,7 +96,22 @@ void main() {
 
       await sh('tmux kill-session -t $name');
 
-      // 5. Обрив: сервер закриває саме це з'єднання → сервіс це помічає.
+      // 5. exit у shell, а через 2 с — зміна розміру (сховалась клавіатура).
+      //    Без ShellLink OpenSSH розриває все з'єднання (08.11.2026, планшет).
+      final plain = await ssh.startShell(width: 80, height: 24);
+      final link = ShellLink.ssh(plain);
+      plain.stdout.listen((_) {});
+      link.send('exit\n');
+      await plain.done.timeout(const Duration(seconds: 10));
+      await Future<void>.delayed(const Duration(seconds: 2));
+      link.resize(120, 40);
+      link.send('x');
+      link.close();
+      await Future<void>.delayed(const Duration(seconds: 2));
+      expect(ssh.isConnected, isTrue, reason: 'з\'єднання пережило закритий shell');
+      expect((await sh('echo alive')).trim(), 'alive');
+
+      // 6. Обрив: сервер закриває саме це з'єднання → сервіс це помічає.
       expect(ssh.connectionLost, isFalse);
       unawaited(ssh.exec(r'kill -9 $PPID').catchError((_) => CommandResult('', '', -1)));
       await until(() async => !ssh.isConnected, 'обрив помічено');

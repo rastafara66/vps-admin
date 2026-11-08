@@ -34,6 +34,15 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
   bool _secretLoaded = false;
   bool _obscurePw = true;
 
+  /// Збережений приватний ключ не показуємо відкритим текстом: інакше він
+  /// потрапляє на знімки екрана й у трансляції. Показати чи замінити —
+  /// лише свідомою дією.
+  bool _keyHidden = false;
+
+  /// Ключ, збережений до «Замінити»: якщо новий не вставили — лишається він.
+  String? _storedKey;
+  bool _replacingKey = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +66,8 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
       _password.text = secret?.password ?? '';
       _key.text = secret?.privateKeyPem ?? '';
       _passphrase.text = secret?.passphrase ?? '';
+      _keyHidden = _key.text.trim().isNotEmpty;
+      _storedKey = _keyHidden ? _key.text : null;
       _loadingSecret = false;
       _secretLoaded = true;
     });
@@ -163,11 +174,38 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
                     onPressed: () => setState(() => _obscurePw = !_obscurePw),
                   ))
             else ...[
-              _field(_key, l.fieldPrivateKey,
-                  icon: Icons.key,
-                  hint: '-----BEGIN OPENSSH PRIVATE KEY-----',
-                  maxLines: 6,
-                  mono: true),
+              if (_keyHidden)
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.key),
+                    title: Text(l.keyStoredTitle),
+                    subtitle: Text(l.keyStoredHint),
+                    trailing: Wrap(
+                      spacing: 4,
+                      children: [
+                        TextButton(
+                          onPressed: () => setState(() => _keyHidden = false),
+                          child: Text(l.keyShow),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _key.clear();
+                            _keyHidden = false;
+                            _replacingKey = true;
+                          }),
+                          child: Text(l.keyReplace),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                _field(_key, l.fieldPrivateKey,
+                    icon: Icons.key,
+                    hint: '-----BEGIN OPENSSH PRIVATE KEY-----',
+                    helper: _replacingKey ? l.keyReplaceHelp : null,
+                    maxLines: 6,
+                    mono: true),
               _field(_passphrase, l.fieldPassphrase,
                   icon: Icons.lock, obscure: true),
             ],
@@ -256,7 +294,9 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
     if (existing == null || _secretLoaded) {
       secret = ServerSecret(
         password: _auth == AuthType.password ? _password.text : null,
-        privateKeyPem: _auth == AuthType.key ? _key.text : null,
+        privateKeyPem: _auth == AuthType.key
+            ? (_key.text.trim().isEmpty && _storedKey != null ? _storedKey : _key.text)
+            : null,
         passphrase:
             _auth == AuthType.key && _passphrase.text.isNotEmpty ? _passphrase.text : null,
       );
