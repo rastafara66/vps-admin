@@ -39,17 +39,29 @@ Min Android SDK 23.
 flutter test                # модульні й віджет-тести, без мережі
 ```
 - `test/sessions_test.dart` — сесії, Ctrl, швидкі дії (`sh -n` для кожної вбудованої команди) і
-  **гейт публічного ядра**: у `lib/` немає IP (крім RFC 5737), «odoo», «nightly_deploy».
+  **гейт публічного ядра**: у `lib/` немає IP (крім RFC 5737), а в жодному файлі репо — особистих
+  маркерів розробника. Маркери самі особисті, тож лежать поза git: `private_markers.local.txt`
+  (рядок — маркер, `#` — коментар; `*.local.txt` у `.gitignore`).
 - `test/live_ssh_test.dart` — **ручна** перевірка наживо (мережа + сервер з tmux), без змінних
   середовища пропускається. Адреса й ключ — лише зі змінних, у репо їх немає:
   `VPS_ADMIN_LIVE_HOST=… VPS_ADMIN_LIVE_KEY=<шлях до ключа> flutter test test/live_ssh_test.dart`
   (тимчасова сесія `vpsadmin_selftest_<pid>`, прибирає її сама; наприкінці навмисно рве своє з'єднання).
 
 ## Реліз
-APK у **GitHub Releases** (не в git; `*.apk` у .gitignore). Тег `vX.Y.Z`:
-```bash
+APK у **GitHub Releases** (не в git; `*.apk` у .gitignore). Тег `vX.Y.Z`.
+
+🔴 **Збирати з літери диска, а не з `C:\Users\<ім'я>\…`**: Flutter вшиває в `libapp.so` шлях до
+згенерованого `dart_plugin_registrant.dart`, тобто ім'я користувача Windows (знайдено 08.11.2026).
+
+```powershell
+subst V: "C:\Users\<ім'я>\Projects\VPS admin"     # один раз за сеанс Windows
+cd V:\ ; flutter build apk --release
+python tool/check_release_apk.py build/app/outputs/flutter-apk/app-release.apk   # 0 = чисто
 gh release create vX.Y.Z --title "..." --notes "..." vps-admin-X.Y.Z.apk
 ```
+
+`check_release_apk.py` шукає в APK ім'я користувача ОС, шляхи `Users/…` і маркери з
+`private_markers.local.txt`; код 1 — не публікувати.
 
 ## Гочі
 - Проєкт у **OneDrive** → інколи лочить `build/`: `rm -rf build/app/intermediates` і повторити.
@@ -65,4 +77,4 @@ gh release create vX.Y.Z --title "..." --notes "..." vps-admin-X.Y.Z.apk
 Play). Свої сервери, назви сесій tmux (напр. для Claude Code), власні швидкі дії, cron-рядки
 розробник вводить у застосунку на телефоні; у код і переклади — лише загальні можливості з
 нейтральними прикладами (`main`, `vps.example.com`, `203.0.113.10`). 08.11 з перекладів прибрано
-залишки особистих дій (`nightly_deploy.sh`, `odoo-prod`) — гейт у `test/sessions_test.dart`.
+залишки особистих дій розробника — гейт у `test/sessions_test.dart`.

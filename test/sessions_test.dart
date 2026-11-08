@@ -218,23 +218,58 @@ void main() {
           m[0] == '0.0.0.0';
     }
 
-    final markers = ['nightly_deploy', 'odoo'];
     final problems = <String>[];
-    final files = Directory('lib')
+    final libFiles = Directory('lib')
         .listSync(recursive: true)
         .whereType<File>()
         .where((f) => f.path.endsWith('.dart') || f.path.endsWith('.arb'));
-    for (final f in files) {
-      final text = f.readAsStringSync();
-      for (final m in ip.allMatches(text)) {
+    for (final f in libFiles) {
+      for (final m in ip.allMatches(f.readAsStringSync())) {
         if (!allowedIp(m)) problems.add('${f.path}: IP ${m[0]}');
       }
+    }
+
+    // Самі маркери (IP, імена, назви скриптів розробника) теж особисті, тож
+    // лежать поза git — у private_markers.local.txt на машині розробника.
+    // Перевіряються всі файли, які йдуть у публічний репозиторій.
+    final markers = privateMarkers();
+    for (final f in trackedTextFiles()) {
+      final text = f.readAsStringSync().toLowerCase();
       for (final w in markers) {
-        if (text.toLowerCase().contains(w)) problems.add('${f.path}: «$w»');
+        if (text.contains(w)) problems.add('${f.path}: особистий маркер №${markers.indexOf(w) + 1}');
       }
     }
     expect(problems, isEmpty, reason: problems.join('\n'));
   });
+}
+
+/// Маркери з private_markers.local.txt (поза git). Немає файлу — порожньо.
+List<String> privateMarkers() {
+  final f = File('private_markers.local.txt');
+  if (!f.existsSync()) return const [];
+  return f
+      .readAsLinesSync()
+      .map((l) => l.trim().toLowerCase())
+      .where((l) => l.isNotEmpty && !l.startsWith('#'))
+      .toList();
+}
+
+/// Текстові файли, які git відправить у публічний репозиторій.
+List<File> trackedTextFiles() {
+  try {
+    final r = Process.runSync('git', ['ls-files']);
+    if (r.exitCode != 0) throw StateError('git');
+    const binary = ['.png', '.jpg', '.jpeg', '.webp', '.ico', '.jar', '.apk', '.keystore', '.jks'];
+    return (r.stdout as String)
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty && !binary.any(l.toLowerCase().endsWith))
+        .map(File.new)
+        .where((f) => f.existsSync())
+        .toList();
+  } catch (_) {
+    return Directory('lib').listSync(recursive: true).whereType<File>().toList();
+  }
 }
 
 /// sh для перевірки синтаксису: у PATH або з Git for Windows.

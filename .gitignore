@@ -55,3 +55,6 @@ app.*.map.json
 
 # Claude Code local settings (personal, not for the public repo)
 .claude/settings.local.json
+
+# Personal markers of the developer (never public)
+*.local.txt
