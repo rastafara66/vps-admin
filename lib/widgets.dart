@@ -113,7 +113,10 @@ class RequireConnection extends StatelessWidget {
     final connecting = ssh.status == SshStatus.connecting;
     return _Notice(
       icon: Icons.link_off,
-      text: ssh.error ?? l.noConnectionTo(app.activeServer!.name),
+      text: ssh.error ??
+          (ssh.connectionLost
+              ? l.connectionLost(app.activeServer!.name)
+              : l.noConnectionTo(app.activeServer!.name)),
       action: connecting
           ? const CircularProgressIndicator()
           : FilledButton.icon(

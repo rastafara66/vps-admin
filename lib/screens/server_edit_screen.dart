@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../terminal_keys.dart';
 import '../widgets.dart';
 
 /// Форма додавання / редагування VPS-сервера + секрет.
@@ -23,6 +24,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
   late final TextEditingController _user;
   late final TextEditingController _dir;
   late final TextEditingController _group;
+  late final TextEditingController _startup;
   final _password = TextEditingController();
   final _key = TextEditingController();
   final _passphrase = TextEditingController();
@@ -42,6 +44,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
     _user = TextEditingController(text: e?.username ?? 'ubuntu');
     _dir = TextEditingController(text: e?.defaultDir ?? '/home/ubuntu');
     _group = TextEditingController(text: e?.group ?? '');
+    _startup = TextEditingController(text: e?.startupCommand ?? '');
     _auth = e?.auth ?? AuthType.key;
     if (e != null) _loadSecret(e.id);
   }
@@ -61,7 +64,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name, _host, _port, _user, _dir, _group, _password, _key, _passphrase]) {
+    for (final c in [_name, _host, _port, _user, _dir, _group, _startup, _password, _key, _passphrase]) {
       c.dispose();
     }
     super.dispose();
@@ -111,6 +114,31 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
             ),
             _field(_dir, l.fieldStartDir, icon: Icons.folder_open),
             _field(_group, l.fieldGroup, icon: Icons.folder_outlined),
+            _field(_startup, l.fieldStartupCmd,
+                icon: Icons.play_circle_outline,
+                hint: tmuxStartupCommand(),
+                helper: l.fieldStartupCmdHelp,
+                mono: true),
+            Wrap(
+              spacing: 8,
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.layers_outlined, size: 18),
+                  label: const Text('tmux'),
+                  onPressed: () => setState(() => _startup.text = tmuxStartupCommand()),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.layers_outlined, size: 18),
+                  label: const Text('screen'),
+                  onPressed: () => setState(() => _startup.text = screenStartupCommand()),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.clear, size: 18),
+                  label: Text(l.startupNone),
+                  onPressed: () => setState(() => _startup.clear()),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             SegmentedButton<AuthType>(
               segments: [
@@ -177,6 +205,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
     TextEditingController c,
     String label, {
     String? hint,
+    String? helper,
     IconData? icon,
     TextInputType? keyboard,
     String? Function(String?)? validator,
@@ -197,6 +226,8 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
+          helperText: helper,
+          helperMaxLines: 6,
           prefixIcon: icon == null ? null : Icon(icon),
           suffixIcon: suffix,
         ),
@@ -217,6 +248,7 @@ class _ServerEditScreenState extends State<ServerEditScreen> {
       auth: _auth,
       defaultDir: _dir.text.trim().isEmpty ? '/' : _dir.text.trim(),
       group: _group.text.trim(),
+      startupCommand: _startup.text.trim(),
     );
 
     ServerSecret? secret;

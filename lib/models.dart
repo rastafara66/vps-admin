@@ -26,6 +26,11 @@ class ServerProfile {
   /// Тека (група) сервера. Порожня = без теки.
   String group;
 
+  /// Команда, яку Термінал виконує одразу після входу (напр.
+  /// `tmux new -A -s main` — підключитися до постійної сесії). Порожня = нічого.
+  /// Це налаштування користувача: у коді застосунку конкретних назв сесій немає.
+  String startupCommand;
+
   ServerProfile({
     String? id,
     required this.name,
@@ -35,6 +40,7 @@ class ServerProfile {
     this.auth = AuthType.key,
     this.defaultDir = '/home/ubuntu',
     this.group = '',
+    this.startupCommand = '',
   }) : id = id ?? _uuid.v4();
 
   ServerProfile copy() => ServerProfile(
@@ -46,6 +52,7 @@ class ServerProfile {
         auth: auth,
         defaultDir: defaultDir,
         group: group,
+        startupCommand: startupCommand,
       );
 
   Map<String, dynamic> toJson() => {
@@ -57,6 +64,7 @@ class ServerProfile {
         'auth': auth.wire,
         'defaultDir': defaultDir,
         'group': group,
+        'startupCommand': startupCommand,
       };
 
   factory ServerProfile.fromJson(Map<String, dynamic> j) => ServerProfile(
@@ -68,6 +76,7 @@ class ServerProfile {
         auth: AuthTypeX.fromWire(j['auth'] as String?),
         defaultDir: j['defaultDir'] as String? ?? '/home/ubuntu',
         group: j['group'] as String? ?? '',
+        startupCommand: j['startupCommand'] as String? ?? '',
       );
 
   String get displayTarget => '$username@$host:$port';

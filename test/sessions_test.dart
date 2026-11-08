@@ -1,0 +1,190 @@
+// Постійні сесії (tmux/screen), команда при відкритті терміналу, клавіша Ctrl
+// і «публічне ядро без особистого»: юніт-тести без плагінів і без мережі.
+import 'dart:io';
+
+import 'package:flutter/widgets.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:vps_admin/models.dart';
+import 'package:vps_admin/seed_data.dart';
+import 'package:vps_admin/terminal_keys.dart';
+
+void main() {
+  group('ServerProfile.startupCommand', () {
+    test('зберігається й читається', () {
+      final p = ServerProfile(
+        name: 'T',
+        host: 'vps.example.com',
+        username: 'ubuntu',
+        startupCommand: 'tmux new -A -s work',
+      );
+      final back = ServerProfile.fromJson(p.toJson());
+      expect(back.startupCommand, 'tmux new -A -s work');
+      expect(p.copy().startupCommand, 'tmux new -A -s work');
+    });
+
+    test('профіль зі старої версії (без поля) читається з порожньою командою', () {
+      final old = {
+        'id': 'x',
+        'name': 'Old',
+        'host': 'h',
+        'port': 22,
+        'username': 'u',
+        'auth': 'key',
+        'defaultDir': '/srv',
+        'group': '',
+      };
+      expect(ServerProfile.fromJson(old).startupCommand, '');
+    });
+
+    test('за замовчуванням команди немає — новий сервер нічого сам не запускає', () {
+      expect(ServerProfile(name: 'n', host: 'h', username: 'u').startupCommand, '');
+    });
+  });
+
+  group('shellStartupInput', () {
+    test('тека, потім команда — кожна з Enter', () {
+      expect(
+        shellStartupInput(dir: '/home/me', command: 'tmux new -A -s main'),
+        'cd "/home/me"\ntmux new -A -s main\n',
+      );
+    });
+
+    test('без команди — лише перехід у теку (як було)', () {
+      expect(shellStartupInput(dir: '/srv', command: ''), 'cd "/srv"\n');
+      expect(shellStartupInput(dir: '/srv', command: '   '), 'cd "/srv"\n');
+    });
+
+    test('корінь і порожня тека не дають cd', () {
+      expect(shellStartupInput(dir: '/', command: 'htop'), 'htop\n');
+      expect(shellStartupInput(dir: null, command: null), '');
+    });
+  });
+
+  group('готові команди сесій', () {
+    test('tmux підключає або створює сесію з назвою', () {
+      expect(tmuxStartupCommand(), 'tmux new -A -s main');
+      expect(tmuxStartupCommand('work'), 'tmux new -A -s work');
+    });
+
+    test('screen перепідключає або створює', () {
+      expect(screenStartupCommand('work'), 'screen -D -R -S work');
+    });
+
+    test('меню tmux: префікс Ctrl+b (0x02) і клавіша', () {
+      expect(TmuxKey.detach.sequence, '\x02d');
+      expect(TmuxKey.newWindow.sequence, '\x02c');
+      expect(TmuxKey.nextWindow.sequence, '\x02n');
+      expect(TmuxKey.chooseSession.sequence, '\x02s');
+      expect(TmuxKey.scrollMode.sequence, '\x02[');
+      expect(screenDetachSequence, '\x01d');
+    });
+  });
+
+  group('ctrlChar — екранна клавіша Ctrl', () {
+    test('літери', () {
+      expect(ctrlChar('a'), '\x01');
+      expect(ctrlChar('b'), '\x02');
+      expect(ctrlChar('c'), '\x03');
+      expect(ctrlChar('C'), '\x03', reason: 'Shift не має значення');
+      expect(ctrlChar('z'), '\x1a');
+    });
+
+    test('символи [ \\ ] ^ _, пробіл, @ і ?', () {
+      expect(ctrlChar('['), '\x1b');
+      expect(ctrlChar('\\'), '\x1c');
+      expect(ctrlChar(']'), '\x1d');
+      expect(ctrlChar('_'), '\x1f');
+      expect(ctrlChar(' '), '\x00');
+      expect(ctrlChar('@'), '\x00');
+      expect(ctrlChar('?'), '\x7f');
+    });
+
+    test('без керуючого відповідника — null (символ іде як є)', () {
+      expect(ctrlChar('1'), isNull);
+      expect(ctrlChar('й'), isNull);
+      expect(ctrlChar('ab'), isNull);
+      expect(ctrlChar(''), isNull);
+    });
+  });
+
+  group('вбудовані швидкі дії', () {
+    for (final locale in const [Locale('en'), Locale('uk')]) {
+      test('група «Постійні сесії» є ($locale)', () {
+        final l = lookupAppLocalizations(locale);
+        final sessions =
+            commonQuickActions(l).where((a) => a.group == l.grpSessions).toList();
+        expect(sessions.map((a) => a.title),
+            containsAll([l.qaTmuxCheck, l.qaTmuxInstall, l.qaTmuxMouse, l.qaTmuxList]));
+        final install = sessions.firstWhere((a) => a.title == l.qaTmuxInstall);
+        expect(install.dangerous, isTrue, reason: 'встановлення — з підтвердженням');
+      });
+
+      test('повідомлення, вбудовані в команди, не ламають лапки shell ($locale)', () {
+        final l = lookupAppLocalizations(locale);
+        for (final m in [l.msgTmuxMissing, l.msgTmuxNoSessions, l.msgCronEmpty]) {
+          expect(m, isNot(matches(r'["$`\\!]')), reason: m);
+        }
+      });
+    }
+
+    final sh = _findSh();
+    test('кожна вбудована команда — синтаксично правильний sh', () async {
+      for (final locale in const [Locale('en'), Locale('uk')]) {
+        final l = lookupAppLocalizations(locale);
+        for (final a in commonQuickActions(l)) {
+          final r = await Process.run(sh!, ['-n', '-c', a.command]);
+          expect(r.exitCode, 0, reason: '${a.title}: ${a.command}\n${r.stderr}');
+        }
+      }
+    }, skip: sh == null ? 'sh недоступний на цій машині' : false);
+  });
+
+  // Публічне ядро йде у Google Play і на GitHub: жодних адрес, назв проєктів
+  // чи скриптів конкретного розробника. Його налаштування (сервери, назви
+  // сесій, власні дії) живуть лише в застосунку на телефоні.
+  test('у публічному коді й перекладах немає особистих налаштувань', () {
+    final ip = RegExp(r'\b(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\b');
+    // Дозволені: документаційні діапазони (RFC 5737) і службові адреси.
+    bool allowedIp(Match m) {
+      final a = '${m[1]}.${m[2]}.${m[3]}';
+      return a == '192.0.2' ||
+          a == '198.51.100' ||
+          a == '203.0.113' ||
+          m[0] == '127.0.0.1' ||
+          m[0] == '0.0.0.0';
+    }
+
+    final markers = ['nightly_deploy', 'odoo'];
+    final problems = <String>[];
+    final files = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart') || f.path.endsWith('.arb'));
+    for (final f in files) {
+      final text = f.readAsStringSync();
+      for (final m in ip.allMatches(text)) {
+        if (!allowedIp(m)) problems.add('${f.path}: IP ${m[0]}');
+      }
+      for (final w in markers) {
+        if (text.toLowerCase().contains(w)) problems.add('${f.path}: «$w»');
+      }
+    }
+    expect(problems, isEmpty, reason: problems.join('\n'));
+  });
+}
+
+/// sh для перевірки синтаксису: у PATH або з Git for Windows.
+String? _findSh() {
+  for (final c in [
+    'sh',
+    r'C:\Program Files\Git\usr\bin\sh.exe',
+    r'C:\Program Files\Git\bin\sh.exe',
+  ]) {
+    try {
+      if (Process.runSync(c, ['-c', 'true']).exitCode == 0) return c;
+    } catch (_) {}
+  }
+  return null;
+}

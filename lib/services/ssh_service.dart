@@ -35,12 +35,17 @@ class SshService extends ChangeNotifier {
   String? _connectedServerId;
   SSHClient? _client;
   String? _banner;
+  bool _connectionLost = false;
 
   SshStatus get status => _status;
   String? get error => _error;
   String? get banner => _banner;
   String? get connectedServerId => _connectedServerId;
   bool get isConnected => _status == SshStatus.connected && _client != null;
+
+  /// З'єднання обірвалось само (мережа, сон телефона, перезавантаження сервера),
+  /// а не закрите кнопкою. Скидається при наступному підключенні.
+  bool get connectionLost => _connectionLost;
 
   void _set(SshStatus s, {String? error}) {
     _status = s;
@@ -52,6 +57,7 @@ class SshService extends ChangeNotifier {
   Future<void> connect(ServerProfile server, ServerSecret? secret) async {
     if (isConnected && _connectedServerId == server.id) return;
     await disconnect();
+    _connectionLost = false;
     _set(SshStatus.connecting);
     try {
       final socket = await SSHSocket.connect(
@@ -88,12 +94,29 @@ class SshService extends ChangeNotifier {
       _client = client;
       _connectedServerId = server.id;
       _banner = client.remoteVersion;
+      // Без цього обірване з'єднання виглядало б живим: вкладки показували б
+      // термінал, а кожна команда падала б. Тепер UI пропонує підключитися знову.
+      unawaited(client.done.then(
+        (_) => _onClientClosed(client),
+        onError: (_) => _onClientClosed(client),
+      ));
       _set(SshStatus.connected);
     } catch (e) {
       _client = null;
       _connectedServerId = null;
       _set(SshStatus.error, error: _humanize(e));
     }
+  }
+
+  /// Транспорт закрився. Якщо це не наше власне [disconnect] (тоді _client
+  /// уже інший або null) — позначаємо обрив.
+  void _onClientClosed(SSHClient client) {
+    if (!identical(_client, client)) return;
+    _client = null;
+    _connectedServerId = null;
+    _banner = null;
+    _connectionLost = true;
+    _set(SshStatus.disconnected);
   }
 
   Future<void> disconnect() async {

@@ -10,6 +10,7 @@ import 'package:xterm/xterm.dart';
 
 import '../app_state.dart';
 import '../services/ssh_service.dart';
+import '../terminal_keys.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -39,9 +40,17 @@ class _TerminalViewState extends State<_TerminalView> {
   bool _starting = true;
   String? _error;
 
+  /// Shell завершився (exit, або програма з «команди при відкритті» вийшла).
+  bool _ended = false;
+
+  /// Екранна клавіша Ctrl натиснута: наступний символ піде як Ctrl+символ.
+  bool _ctrlArmed = false;
+
   @override
   void initState() {
     super.initState();
+    _terminal.onOutput = _onTerminalOutput;
+    _terminal.onResize = (w, h, pw, ph) => _session?.resizeTerminal(w, h);
     // Після першого кадру — інакше AppLocalizations.of(context) в _start
     // кидає виняток (dependOnInheritedWidget до завершення initState).
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
@@ -53,15 +62,13 @@ class _TerminalViewState extends State<_TerminalView> {
     final app = context.read<AppState>();
     final endedMsg = AppLocalizations.of(context).sessionEnded;
     try {
-      final session = await ssh.startShell(width: 80, height: 24);
+      // Розмір беремо з терміналу: при «Відкрити знову» вікно вже має свій
+      // розмір, і нового onResize не буде.
+      final session = await ssh.startShell(
+        width: _terminal.viewWidth,
+        height: _terminal.viewHeight,
+      );
       _session = session;
-
-      _terminal.onOutput = (data) {
-        session.write(Uint8List.fromList(utf8.encode(data)));
-      };
-      _terminal.onResize = (w, h, pw, ph) {
-        session.resizeTerminal(w, h);
-      };
 
       _subOut = session.stdout.listen((data) {
         _terminal.write(utf8.decode(data, allowMalformed: true));
@@ -70,19 +77,30 @@ class _TerminalViewState extends State<_TerminalView> {
         _terminal.write(utf8.decode(data, allowMalformed: true));
       });
 
-      // Перейти у стартову теку сервера.
-      final dir = app.activeServer?.defaultDir;
-      if (dir != null && dir.isNotEmpty && dir != '/') {
-        session.write(Uint8List.fromList(utf8.encode('cd "$dir"\n')));
-      }
+      // Стартова тека й «команда при відкритті терміналу» з профілю сервера
+      // (напр. tmux new -A -s main — повернутися в постійну сесію).
+      final server = app.activeServer;
+      final startup = shellStartupInput(
+        dir: server?.defaultDir,
+        command: server?.startupCommand,
+      );
+      if (startup.isNotEmpty) _send(startup);
 
       unawaited(session.done.then((_) {
-        if (mounted) {
-          _terminal.write('\r\n$endedMsg\r\n');
-        }
+        if (!mounted || !identical(_session, session)) return;
+        _terminal.write('\r\n$endedMsg\r\n');
+        setState(() {
+          _ended = true;
+          _ctrlArmed = false;
+        });
       }));
 
-      if (mounted) setState(() => _starting = false);
+      if (mounted) {
+        setState(() {
+          _starting = false;
+          _ended = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -93,12 +111,61 @@ class _TerminalViewState extends State<_TerminalView> {
     }
   }
 
-  void _sendCtrlC() {
-    _session?.write(Uint8List.fromList([0x03]));
+  /// Відкрити shell заново в тому самому вікні (історія екрана лишається).
+  Future<void> _reopen() async {
+    await _closeSession();
+    _terminal.write('\r\n');
+    setState(() {
+      _starting = true;
+      _error = null;
+      _ended = false;
+    });
+    await _start();
   }
 
-  void _pasteAndRun(String text) {
+  Future<void> _closeSession() async {
+    await _subOut?.cancel();
+    await _subErr?.cancel();
+    _subOut = null;
+    _subErr = null;
+    final s = _session;
+    _session = null;
+    try {
+      s?.close();
+    } catch (_) {}
+  }
+
+  /// Усе, що вводить користувач (клавіатура, вставка) і що відповідає
+  /// сам термінал, іде сюди. Якщо екранна Ctrl натиснута — перетворюємо
+  /// наступний символ на керуючий (Ctrl+b → 0x02 тощо).
+  void _onTerminalOutput(String data) {
+    if (_ctrlArmed && data.length == 1) {
+      data = ctrlChar(data) ?? data;
+      if (mounted) setState(() => _ctrlArmed = false);
+    }
+    _send(data);
+  }
+
+  void _send(String text) {
     _session?.write(Uint8List.fromList(utf8.encode(text)));
+  }
+
+  /// Клавіша з панелі (стрілки, Tab, Esc) — з урахуванням режиму програми
+  /// (vim/tmux перемикають стрілки на інші послідовності) і натиснутої Ctrl.
+  void _key(TerminalKey key) {
+    final ctrl = _ctrlArmed;
+    if (ctrl) setState(() => _ctrlArmed = false);
+    _terminal.keyInput(key, ctrl: ctrl);
+  }
+
+  /// «Очистити»: у tmux/vim/less (альтернативний екран) локальне стирання
+  /// розсинхронізує картинку, тож просимо програму перемалюватись (Ctrl+L).
+  void _clear() {
+    if (_terminal.isUsingAltBuffer) {
+      _send('\x0c');
+    } else {
+      _terminal.write('\x1b[2J\x1b[H');
+    }
   }
 
   @override
@@ -130,13 +197,7 @@ class _TerminalViewState extends State<_TerminalView> {
               Text(l.shellOpenError(_error!), textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: () {
-                  setState(() {
-                    _starting = true;
-                    _error = null;
-                  });
-                  _start();
-                },
+                onPressed: _reopen,
                 child: Text(l.tryAgain),
               ),
             ],
@@ -158,17 +219,36 @@ class _TerminalViewState extends State<_TerminalView> {
             padding: const EdgeInsets.all(6),
           ),
         ),
+        if (_ended)
+          Material(
+            color: context.appColors.panel,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(l.shellEnded)),
+                  FilledButton.icon(
+                    onPressed: _reopen,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: Text(l.reopenShell),
+                  ),
+                ],
+              ),
+            ),
+          ),
         _Toolbar(
-          pasteLabel: l.keyPaste,
-          clearLabel: l.keyClear,
-          onCtrlC: _sendCtrlC,
-          onTab: () => _pasteAndRun('\t'),
-          onEsc: () => _pasteAndRun('\x1b'),
-          onArrowUp: () => _pasteAndRun('\x1b[A'),
-          onClear: () => _terminal.write('\x1b[2J\x1b[H'),
+          l: l,
+          ctrlArmed: _ctrlArmed,
+          onCtrl: () => setState(() => _ctrlArmed = !_ctrlArmed),
+          onCtrlC: () => _send('\x03'),
+          onKey: _key,
+          onSend: _send,
+          onClear: _clear,
           onPaste: () async {
             final data = await Clipboard.getData(Clipboard.kTextPlain);
-            if (data?.text != null) _pasteAndRun(data!.text!);
+            if (data?.text != null) _terminal.paste(data!.text!);
           },
         ),
       ],
@@ -178,22 +258,22 @@ class _TerminalViewState extends State<_TerminalView> {
 
 /// Панель спецклавіш, яких немає на екранній клавіатурі.
 class _Toolbar extends StatelessWidget {
-  final String pasteLabel;
-  final String clearLabel;
+  final AppLocalizations l;
+  final bool ctrlArmed;
+  final VoidCallback onCtrl;
   final VoidCallback onCtrlC;
-  final VoidCallback onTab;
-  final VoidCallback onEsc;
-  final VoidCallback onArrowUp;
+  final void Function(TerminalKey key) onKey;
+  final void Function(String text) onSend;
   final VoidCallback onClear;
   final VoidCallback onPaste;
 
   const _Toolbar({
-    required this.pasteLabel,
-    required this.clearLabel,
+    required this.l,
+    required this.ctrlArmed,
+    required this.onCtrl,
     required this.onCtrlC,
-    required this.onTab,
-    required this.onEsc,
-    required this.onArrowUp,
+    required this.onKey,
+    required this.onSend,
     required this.onClear,
     required this.onPaste,
   });
@@ -206,27 +286,78 @@ class _Toolbar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _btn('Ctrl-C', onCtrlC),
-            _btn('Tab', onTab),
-            _btn('Esc', onEsc),
-            _btn('↑', onArrowUp),
-            _btn(pasteLabel, onPaste),
-            _btn(clearLabel, onClear),
+            _btn(context, 'Ctrl', onCtrl,
+                active: ctrlArmed, tooltip: l.keyCtrlHint),
+            _btn(context, 'Ctrl-C', onCtrlC),
+            _btn(context, 'Esc', () => onKey(TerminalKey.escape)),
+            _btn(context, 'Tab', () => onKey(TerminalKey.tab)),
+            _btn(context, '←', () => onKey(TerminalKey.arrowLeft)),
+            _btn(context, '↑', () => onKey(TerminalKey.arrowUp)),
+            _btn(context, '↓', () => onKey(TerminalKey.arrowDown)),
+            _btn(context, '→', () => onKey(TerminalKey.arrowRight)),
+            _sessionMenu(context),
+            _btn(context, l.keyPaste, onPaste),
+            _btn(context, l.keyClear, onClear),
           ],
         ),
       ),
     );
   }
 
-  Widget _btn(String label, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: OutlinedButton(
-          onPressed: onTap,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            minimumSize: const Size(0, 36),
+  /// Меню «tmux»: типові команди з префіксом Ctrl+b, плюс від'єднання screen.
+  Widget _sessionMenu(BuildContext context) {
+    final items = <(String, String)>[
+      (l.tmuxDetach, TmuxKey.detach.sequence),
+      (l.tmuxNewWindow, TmuxKey.newWindow.sequence),
+      (l.tmuxNextWindow, TmuxKey.nextWindow.sequence),
+      (l.tmuxSessions, TmuxKey.chooseSession.sequence),
+      (l.tmuxScroll, TmuxKey.scrollMode.sequence),
+      (l.screenDetach, screenDetachSequence),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      child: PopupMenuButton<String>(
+        tooltip: l.tmuxMenuHint,
+        onSelected: onSend,
+        itemBuilder: (_) => [
+          for (final (label, seq) in items)
+            PopupMenuItem(value: seq, child: Text(label)),
+        ],
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
+            borderRadius: BorderRadius.circular(18),
           ),
-          child: Text(label, style: const TextStyle(fontSize: 12)),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('tmux', style: TextStyle(fontSize: 12)),
+              Icon(Icons.arrow_drop_up, size: 18),
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _btn(BuildContext context, String label, VoidCallback onTap,
+      {bool active = false, String? tooltip}) {
+    final scheme = Theme.of(context).colorScheme;
+    final button = OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        minimumSize: const Size(0, 36),
+        backgroundColor: active ? scheme.primary : null,
+        foregroundColor: active ? scheme.onPrimary : null,
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12)),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      child: tooltip == null ? button : Tooltip(message: tooltip, child: button),
+    );
+  }
 }

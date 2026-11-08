@@ -13,9 +13,11 @@ class HelpScreen extends StatelessWidget {
 
     final sections = <_HelpSection>[
       _HelpSection(Icons.dns_outlined, l.helpServersTitle, l.helpServersBody),
-      _HelpSection(Icons.vpn_key_outlined, l.helpSshTitle, l.helpSshBody),
+      _HelpSection(Icons.vpn_key_outlined, l.helpSshTitle, l.helpSshBody,
+          initiallyOpen: true),
       _HelpSection(Icons.monitor_heart_outlined, l.helpInfoTitle, l.helpInfoBody),
       _HelpSection(Icons.terminal, l.helpTerminalTitle, l.helpTerminalBody),
+      _HelpSection(Icons.layers_outlined, l.helpSessionsTitle, l.helpSessionsBody),
       _HelpSection(Icons.folder_outlined, l.helpFilesTitle, l.helpFilesBody),
       _HelpSection(Icons.smart_toy_outlined, l.helpAiTitle, l.helpAiBody),
       _HelpSection(Icons.bolt_outlined, l.helpActionsTitle, l.helpActionsBody),
@@ -44,15 +46,16 @@ class _HelpSection {
   final IconData icon;
   final String title;
   final String body;
-  const _HelpSection(this.icon, this.title, this.body);
+
+  /// SSH-ключі — найчастіше потрібний розділ, тож розгорнутий за замовчуванням.
+  final bool initiallyOpen;
+  const _HelpSection(this.icon, this.title, this.body,
+      {this.initiallyOpen = false});
 }
 
 class _HelpTile extends StatelessWidget {
   final _HelpSection section;
   const _HelpTile({required this.section});
-
-  /// SSH-ключі — найчастіше потрібний розділ, тож розгорнутий за замовчуванням.
-  bool get _initiallyOpen => section.title.contains('SSH');
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +63,7 @@ class _HelpTile extends StatelessWidget {
       leading: Icon(section.icon),
       title: Text(section.title,
           style: const TextStyle(fontWeight: FontWeight.w600)),
-      initiallyExpanded: _initiallyOpen,
+      initiallyExpanded: section.initiallyOpen,
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [
