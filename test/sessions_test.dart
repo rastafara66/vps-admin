@@ -80,7 +80,27 @@ void main() {
       expect(TmuxKey.nextWindow.sequence, '\x02n');
       expect(TmuxKey.chooseSession.sequence, '\x02s');
       expect(TmuxKey.scrollMode.sequence, '\x02[');
+      expect(TmuxKey.redraw.sequence, '\x02r');
       expect(screenDetachSequence, '\x01d');
+    });
+  });
+
+  // 08.11.2026: Enter з екранної клавіатури приходив як LF, і меню Claude Code
+  // його не приймало (bash приймав, тому в shell вада не була видна).
+  group('typedToTerminal — Enter з клавіатури телефона', () {
+    test('LF від клавіатури → CR, як справжня клавіша Enter', () {
+      expect(typedToTerminal('\n'), '\r');
+      expect(typedToTerminal('ls\n'), 'ls\r');
+      expect(typedToTerminal('a\r\nb'), 'a\rb');
+    });
+    test('звичайні символи й послідовності — без змін', () {
+      expect(typedToTerminal('y'), 'y');
+      expect(typedToTerminal('\r'), '\r');
+      expect(typedToTerminal('\x1b[A'), '\x1b[A');
+    });
+    test('bracketed paste не чіпаємо', () {
+      const paste = '\x1b[200~line1\nline2\x1b[201~';
+      expect(typedToTerminal(paste), paste);
     });
   });
 

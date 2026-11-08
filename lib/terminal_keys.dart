@@ -39,6 +39,18 @@ String? ctrlChar(String ch) {
   return null;
 }
 
+/// Що вводить користувач → що йде в shell. Екранна клавіатура Android на ↵
+/// вставляє «\n» (LF, як у текстовому полі), а справжня клавіша Enter у будь-якому
+/// терміналі шле «\r» (CR). Bash приймає обидва, тому в shell усе працювало, а
+/// меню програм (Claude Code, mc, htop…) підтверджують лише CR — 08.11.2026 на
+/// планшеті діалог Claude «не реагував» на Enter. Вставка в режимі bracketed
+/// paste (ESC[200~…) лишається як є: програма сама розбирає її рядки.
+String typedToTerminal(String data) {
+  if (data.startsWith('\x1b[200~')) return data;
+  if (!data.contains('\n')) return data;
+  return data.replaceAll('\r\n', '\r').replaceAll('\n', '\r');
+}
+
 /// Префікс tmux за замовчуванням — Ctrl+b.
 const _tmuxPrefix = '\x02';
 
@@ -48,7 +60,8 @@ enum TmuxKey {
   newWindow('c'),
   nextWindow('n'),
   chooseSession('s'),
-  scrollMode('[');
+  scrollMode('['),
+  redraw('r');
 
   final String key;
   const TmuxKey(this.key);

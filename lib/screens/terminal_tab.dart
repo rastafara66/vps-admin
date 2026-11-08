@@ -143,10 +143,12 @@ class _TerminalViewState extends State<_TerminalView> {
   /// наступний символ на керуючий (Ctrl+b → 0x02 тощо).
   void _onTerminalOutput(String data) {
     if (_ctrlArmed && data.length == 1) {
-      data = ctrlChar(data) ?? data;
       if (mounted) setState(() => _ctrlArmed = false);
+      final c = ctrlChar(data);
+      // Ctrl+j — це саме LF, його не перетворюємо.
+      if (c != null) return _send(c);
     }
-    _send(data);
+    _send(typedToTerminal(data));
   }
 
   void _send(String text) => _link?.send(text);
@@ -290,6 +292,9 @@ class _Toolbar extends StatelessWidget {
             _btn(context, 'Ctrl-C', onCtrlC),
             _btn(context, 'Esc', () => onKey(TerminalKey.escape)),
             _btn(context, 'Tab', () => onKey(TerminalKey.tab)),
+            // Enter без клавіатури: підтвердити вибір у меню програми,
+            // не закриваючи пів екрана клавіатурою.
+            _btn(context, '⏎ Enter', () => onKey(TerminalKey.enter)),
             _btn(context, '←', () => onKey(TerminalKey.arrowLeft)),
             _btn(context, '↑', () => onKey(TerminalKey.arrowUp)),
             _btn(context, '↓', () => onKey(TerminalKey.arrowDown)),
@@ -311,6 +316,7 @@ class _Toolbar extends StatelessWidget {
       (l.tmuxNextWindow, TmuxKey.nextWindow.sequence),
       (l.tmuxSessions, TmuxKey.chooseSession.sequence),
       (l.tmuxScroll, TmuxKey.scrollMode.sequence),
+      (l.tmuxRedraw, TmuxKey.redraw.sequence),
       (l.screenDetach, screenDetachSequence),
     ];
     return Padding(

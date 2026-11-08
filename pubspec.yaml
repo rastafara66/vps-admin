@@ -4,7 +4,7 @@ publish_to: 'none'
 
 # versionName / versionCode для Android. ВАЖЛИВО: тримати в синхроні з тегом
 # релізу (vX.Y.Z) — за versionName працює перевірка авто-оновлення.
-version: 1.0.8+8
+version: 1.0.9+9
 
 environment:
   sdk: ^3.7.2
