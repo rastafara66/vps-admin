@@ -120,6 +120,7 @@
   "@heavyActionBody": { "placeholders": { "title": {}, "description": {} } },
   "actionResult": "Result: {title} · exit {code}",
   "@actionResult": { "placeholders": { "title": {}, "code": {} } },
+  "closeResult": "Close result",
 
   "qaDockerTitle": "Docker containers",
 

@@ -26,6 +26,27 @@ class CommandResult {
   }
 }
 
+/// Мітка коду завершення в останньому рядку stdout (див. [wrapForExitCode]).
+const exitCodeMark = '__VPSADMIN_EXIT_';
+
+/// Команда, яка сама друкує свій код завершення останнім рядком stdout.
+///
+/// dartssh2 (2.18–2.22) ставить обробник запитів каналу лише ПІСЛЯ відповіді
+/// на exec, і швидка команда встигає надіслати exit-status раніше — код
+/// губиться (09.11.2026 наживо: 19 з 40 команд, «exit null» у Швидких діях).
+/// Підоболонка `( … )` — щоб і `exit 3` дав свій код; переведення рядків —
+/// щоб коментар у кінці команди не з'їв дужку.
+String wrapForExitCode(String command) =>
+    "(\n$command\n)\nprintf '\\n$exitCodeMark%d\\n' \"\$?\"";
+
+/// Вирізає мітку [wrapForExitCode] з кінця stdout. Вивід повертається
+/// дослівно таким, яким його дала команда; без мітки код — null.
+({String stdout, int? exitCode}) takeExitCode(String stdout) {
+  final m = RegExp('\n$exitCodeMark(\\d+)\n?\$').firstMatch(stdout);
+  if (m == null) return (stdout: stdout, exitCode: null);
+  return (stdout: stdout.substring(0, m.start), exitCode: int.parse(m[1]!));
+}
+
 /// Тримає одне активне SSH-з'єднання з активним сервером.
 /// Дає: одноразовий exec (для Інфо/Швидких дій), інтерактивний shell
 /// (для Терміналу) та SFTP (для Файлів).
@@ -143,8 +164,9 @@ class SshService extends ChangeNotifier {
   }
 
   /// Одноразова команда. Повертає stdout/stderr/exitCode.
+  /// Код завершення друкує сама оболонка (див. [wrapForExitCode]).
   Future<CommandResult> exec(String command) async {
-    final session = await _requireClient.execute(command);
+    final session = await _requireClient.execute(wrapForExitCode(command));
     final out = <int>[];
     final err = <int>[];
     await Future.wait([
@@ -152,10 +174,12 @@ class SshService extends ChangeNotifier {
       session.stderr.forEach(err.addAll),
     ]);
     await session.done;
+    final res = takeExitCode(utf8.decode(out, allowMalformed: true));
     return CommandResult(
-      utf8.decode(out, allowMalformed: true),
+      res.stdout,
       utf8.decode(err, allowMalformed: true),
-      session.exitCode,
+      // Без мітки (оболонку вбито, з'єднання обірвалось) — що дав SSH.
+      res.exitCode ?? session.exitCode,
     );
   }
 

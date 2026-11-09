@@ -15,9 +15,13 @@ Keystore (`flutter_secure_storage`). Теми світла/темна, мови 
   ServerSecret, QuickAction (id/group), ChatMessage.
 - `terminal_keys.dart` — чиста логіка терміналу: екранна Ctrl (`ctrlChar`), меню tmux (`TmuxKey`),
   готові команди сесій (`tmuxStartupCommand` / `screenStartupCommand`), текст старту shell.
+- `safe_terminal.dart` — `SafeTerminal`: xterm 4.0.0 з виправленими командами стирання на краях екрана
+  (на `ESC [ 1 K` у колонці 0 xterm падав, і від екрана tmux лишався верх). Звичайний `Terminal(` у `lib/` заборонено.
+- `shell_link.dart` — після закриття каналу shell у нього нічого не йде (інакше OpenSSH рве все з'єднання).
 - `license.dart` — інтерфейс ліцензії; `FreeLicenseService` (open-core: безкоштовно, без ліміту;
   `kMonetizationEnabled=false`). Pro-модуль приватний, у цей репо НЕ входить.
-- `services/` — `ssh_service.dart` (dartssh2: shell/exec/SFTP), `ai_service.dart`
+- `services/` — `ssh_service.dart` (dartssh2: shell/exec/SFTP; `exec` бере код завершення з мітки, яку друкує
+  сама оболонка, — `wrapForExitCode`: dartssh2 губить `exit-status` швидких команд), `ai_service.dart`
   (Claude/OpenAI/Gemini/OpenAI-сумісний), `store.dart` (prefs + secure storage).
 - `screens/` — по вкладці; `widgets.dart` — спільне (RequireConnection, MonoOutput, GroupHeader, SaveBar).
 - `seed_data.dart` — стартові сервери (порожньо) + поширені «Швидкі дії», зокрема група
@@ -42,7 +46,13 @@ flutter test                # модульні й віджет-тести, бе�
   **гейт публічного ядра**: у `lib/` немає IP (крім RFC 5737), а в жодному файлі репо — особистих
   маркерів розробника. Маркери самі особисті, тож лежать поза git: `private_markers.local.txt`
   (рядок — маркер, `#` — коментар; `*.local.txt` у `.gitignore`).
-- `test/live_ssh_test.dart` — **ручна** перевірка наживо (мережа + сервер з tmux), без змінних
+- `test/terminal_render_test.dart` — малювання: перемальовування в стилі tmux доходить до останнього рядка, команди
+  стирання/вставки/видалення на краях екрана не кидають виняток і не гублять вивід; гейт «лише `SafeTerminal`».
+- `test/exit_code_test.dart` — код завершення через мітку оболонки (справжній `sh`; кожна вбудована дія після
+  обгортки — `sh -n`). `test/widgets_actions_test.dart` — результат швидкої дії видно одразу, без прогортання.
+- 🔴 Тести логіки й живий тест **не бачать екрана**: зміни терміналу перевіряти ще й на пристрої — зайти в tmux
+  з непорожнім екраном, побачити смугу tmux унизу, `adb logcat | grep "E flutter"` — порожньо.
+- `test/live_ssh_test.dart` — **ручна** перевірка наживо (мережа + сервер з tmux; 40 команд — 40 кодів завершення), без змінних
   середовища пропускається. Адреса й ключ — лише зі змінних, у репо їх немає:
   `VPS_ADMIN_LIVE_HOST=… VPS_ADMIN_LIVE_KEY=<шлях до ключа> flutter test test/live_ssh_test.dart`
   (тимчасова сесія `vpsadmin_selftest_<pid>`, прибирає її сама; наприкінці навмисно рве своє з'єднання).

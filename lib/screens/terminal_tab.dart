@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:xterm/xterm.dart';
 
 import '../app_state.dart';
+import '../safe_terminal.dart';
 import '../services/ssh_service.dart';
 import '../shell_link.dart';
 import '../terminal_keys.dart';
@@ -32,7 +33,9 @@ class _TerminalView extends StatefulWidget {
 }
 
 class _TerminalViewState extends State<_TerminalView> {
-  final Terminal _terminal = Terminal(maxLines: 10000);
+  /// SafeTerminal, а не Terminal: xterm 4.0.0 падає на командах стирання,
+  /// якими tmux перемальовує екран (див. safe_terminal.dart).
+  final Terminal _terminal = SafeTerminal(maxLines: 10000);
   final TerminalController _controller = TerminalController();
   /// Відкритий shell. Після закриття каналу в нього нічого не йде —
   /// інакше OpenSSH рве все з'єднання (див. ShellLink).
@@ -323,6 +326,8 @@ class _Toolbar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       child: PopupMenuButton<String>(
         tooltip: l.tmuxMenuHint,
+        // Типова ширина (280) переносила «… (Ctrl+b r)» посеред підказки.
+        constraints: const BoxConstraints(minWidth: 360, maxWidth: 480),
         onSelected: onSend,
         itemBuilder: (_) => [
           for (final (label, seq) in items)

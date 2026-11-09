@@ -111,6 +111,7 @@
   "heavyAction": "Важка дія",
   "heavyActionBody": "«{title}» — {description}\n\nВиконати?",
   "actionResult": "Результат: {title} · exit {code}",
+  "closeResult": "Закрити результат",
 
   "qaDockerTitle": "Docker-контейнери",
 

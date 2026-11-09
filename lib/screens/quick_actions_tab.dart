@@ -132,6 +132,10 @@ class _ActionsState extends State<_Actions> {
                 ),
               ),
             ),
+          // Результат — угорі, а не в кінці списку: 09.11.2026 на планшеті
+          // він опинявся під усіма діями, і натискання виглядало як
+          // «нічого не сталося».
+          if (_result != null) _resultBlock(context, l),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.only(bottom: 88, top: 4),
@@ -142,7 +146,6 @@ class _ActionsState extends State<_Actions> {
                     child: Center(child: Text(l.nothingFound)),
                   ),
                 ..._grouped(context, l, filtered),
-                if (_result != null) _resultBlock(l),
               ],
             ),
           ),
@@ -221,12 +224,15 @@ class _ActionsState extends State<_Actions> {
     );
   }
 
-  Widget _resultBlock(AppLocalizations l) {
+  Widget _resultBlock(BuildContext context, AppLocalizations l) {
+    // Довгий вивід (apt, journalctl) не має витіснити список дій.
+    final maxOutput = MediaQuery.sizeOf(context).height * 0.35;
     return Column(
+      key: const ValueKey('quick-action-result'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
           child: Row(
             children: [
               Icon(_result!.ok ? Icons.check_circle : Icons.error,
@@ -241,16 +247,26 @@ class _ActionsState extends State<_Actions> {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
+              IconButton(
+                tooltip: l.closeResult,
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: () => setState(() => _result = null),
+              ),
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: MonoOutput(_result!.combined.trim().isEmpty
-              ? l.noOutput
-              : _result!.combined.trim()),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxOutput),
+            child: SingleChildScrollView(
+              child: MonoOutput(_result!.combined.trim().isEmpty
+                  ? l.noOutput
+                  : _result!.combined.trim()),
+            ),
+          ),
         ),
-        const SizedBox(height: 24),
+        const Divider(height: 1),
       ],
     );
   }

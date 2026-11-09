@@ -124,4 +124,27 @@ void main() {
       await ssh.disconnect();
     }
   }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
+
+  // 09.11.2026 на планшеті: «tmux: перевірити» вивела «tmux 3.2a», але з
+  // червоним значком і «exit null» — код завершення іноді не доходив.
+  test('швидкі дії: код завершення приходить щоразу', () async {
+    final ssh = SshService();
+    final server = ServerProfile(name: 'live', host: host!, username: user);
+    await ssh.connect(
+        server, ServerSecret(privateKeyPem: File(keyPath!).readAsStringSync()));
+    expect(ssh.isConnected, isTrue, reason: ssh.error);
+    try {
+      const cases = {'true': 0, 'false': 1, 'tmux -V >/dev/null': 0, 'exit 3': 3};
+      final wrong = <String>[];
+      for (var i = 0; i < 10; i++) {
+        for (final c in cases.entries) {
+          final r = await ssh.exec(c.key);
+          if (r.exitCode != c.value) wrong.add('${c.key}: ${r.exitCode}');
+        }
+      }
+      expect(wrong, isEmpty, reason: 'з ${cases.length * 10} команд');
+    } finally {
+      await ssh.disconnect();
+    }
+  }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
 }
