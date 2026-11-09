@@ -111,12 +111,15 @@ class RequireConnection extends StatelessWidget {
     }
 
     final connecting = ssh.status == SshStatus.connecting;
+    final name = app.activeServer!.name;
     return _Notice(
       icon: Icons.link_off,
-      text: ssh.error ??
-          (ssh.connectionLost
-              ? l.connectionLost(app.activeServer!.name)
-              : l.noConnectionTo(app.activeServer!.name)),
+      // Під час підключення (зокрема самостійного, див. AutoReconnect) —
+      // «Підключення…», а не «Немає з'єднання».
+      text: connecting
+          ? l.connectingTo(name)
+          : ssh.error ??
+              (ssh.connectionLost ? l.connectionLost(name) : l.noConnectionTo(name)),
       action: connecting
           ? const CircularProgressIndicator()
           : FilledButton.icon(

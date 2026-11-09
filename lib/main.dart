@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 
 import 'app_state.dart';
+import 'auto_reconnect.dart';
 import 'license.dart';
 import 'screens/home_screen.dart';
 import 'services/ssh_service.dart';
@@ -20,6 +21,9 @@ Future<void> main() async {
   await license.init();
   final appState = AppState(store, ssh, license);
   await appState.init();
+  // Обірвалось не з волі користувача (фон, сон, мережа) — підключитися знову
+  // самим, щойно людина повернеться в застосунок.
+  AutoReconnect(ssh: ssh, reconnect: appState.connectActive).start();
 
   runApp(
     MultiProvider(

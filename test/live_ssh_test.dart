@@ -134,6 +134,9 @@ void main() {
         server, ServerSecret(privateKeyPem: File(keyPath!).readAsStringSync()));
     expect(ssh.isConnected, isTrue, reason: ssh.error);
     try {
+      // Перевірка «живості» після повернення з фону (AutoReconnect).
+      expect(await ssh.checkAlive(), isTrue);
+      expect(ssh.isConnected, isTrue);
       const cases = {'true': 0, 'false': 1, 'tmux -V >/dev/null': 0, 'exit 3': 3};
       final wrong = <String>[];
       for (var i = 0; i < 10; i++) {

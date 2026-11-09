@@ -183,6 +183,26 @@ void main() {
       expect(offenders, isEmpty, reason: 'напряму в канал — ризик розриву з\'єднання');
     });
 
+    // 09.11.2026 на планшеті: з'єднання обірвалось, Термінал закривався й
+    // викликав close() — dartssh2 усередині асинхронно шле EOF у мертвий
+    // транспорт і кидає «SSHStateError(Transport is closed)» у фоні.
+    test('мертвий транспорт: ні close, ні розмір, ні введення не кидають — ні одразу, ні у фоні', () async {
+      final dead = ShellLink(
+        write: (_) => throw StateError('Transport is closed'),
+        resize: (_, __) => throw StateError('Transport is closed'),
+        close: () {
+          // Як SSHSession.close(): void, а всередині — Future з помилкою.
+          Future<void>.error(StateError('Transport is closed'));
+        },
+        done: Completer<void>().future, // канал так і не повідомив про кінець
+      );
+      expect(() => dead.send('x'), returnsNormally);
+      expect(() => dead.resize(80, 24), returnsNormally);
+      expect(dead.isOpen, isFalse, reason: 'після помилки транспорту — вважати закритим');
+      dead.close();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+
     test('наше закриття — один раз, далі тиша', () {
       link.close();
       link.close();

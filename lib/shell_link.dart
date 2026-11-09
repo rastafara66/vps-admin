@@ -40,11 +40,11 @@ class ShellLink {
   bool get isOpen => _open;
 
   void send(String text) {
-    if (_open) _write(Uint8List.fromList(utf8.encode(text)));
+    if (_open) _guard(() => _write(Uint8List.fromList(utf8.encode(text))));
   }
 
   void resize(int width, int height) {
-    if (_open) _resize(width, height);
+    if (_open) _guard(() => _resize(width, height));
   }
 
   /// Закрити з нашого боку (напр. «Відкрити знову»). Якщо сервер уже закрив
@@ -52,8 +52,20 @@ class ShellLink {
   void close() {
     if (!_open) return;
     _open = false;
-    try {
-      _close();
-    } catch (_) {}
+    _guard(_close);
+  }
+
+  /// Обірване з'єднання (транспорт мертвий, а канал про кінець так і не
+  /// повідомив): dartssh2 кидає «Transport is closed» одразу або — у close() —
+  /// з асинхронної частини, яку try/catch не ловить (09.11.2026, планшет).
+  /// Помилка означає, що каналу більше немає.
+  void _guard(void Function() action) {
+    runZonedGuarded(() {
+      try {
+        action();
+      } catch (_) {
+        _open = false;
+      }
+    }, (_, __) => _open = false);
   }
 }

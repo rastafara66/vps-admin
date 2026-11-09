@@ -77,6 +77,9 @@ class SshService extends ChangeNotifier {
   /// Підключитися до сервера. Якщо вже підключені до іншого — перепідключаємось.
   Future<void> connect(ServerProfile server, ServerSecret? secret) async {
     if (isConnected && _connectedServerId == server.id) return;
+    // Уже підключаємось (кнопка під час самостійного перепідключення) —
+    // друге паралельне з'єднання не відкриваємо.
+    if (_status == SshStatus.connecting) return;
     await disconnect();
     _connectionLost = false;
     _set(SshStatus.connecting);
@@ -138,6 +141,26 @@ class SshService extends ChangeNotifier {
     _banner = null;
     _connectionLost = true;
     _set(SshStatus.disconnected);
+  }
+
+  /// Чи справді живе з'єднання, яке здається живим (після сну чи фону воно
+  /// буває напівмертвим: мережа змінилась, сервер давно забув). Коротка
+  /// команда з тайм-аутом; не відповіла — з'єднання закривається як обрив.
+  Future<bool> checkAlive({Duration timeout = const Duration(seconds: 5)}) async {
+    final c = _client;
+    if (c == null || !isConnected) return false;
+    try {
+      await exec('true').timeout(timeout);
+      return true;
+    } catch (_) {
+      if (identical(_client, c)) {
+        _onClientClosed(c);
+        try {
+          c.close();
+        } catch (_) {}
+      }
+      return false;
+    }
   }
 
   Future<void> disconnect() async {

@@ -18,6 +18,9 @@ Keystore (`flutter_secure_storage`). Теми світла/темна, мови 
 - `safe_terminal.dart` — `SafeTerminal`: xterm 4.0.0 з виправленими командами стирання на краях екрана
   (на `ESC [ 1 K` у колонці 0 xterm падав, і від екрана tmux лишався верх). Звичайний `Terminal(` у `lib/` заборонено.
 - `shell_link.dart` — після закриття каналу shell у нього нічого не йде (інакше OpenSSH рве все з'єднання).
+- `auto_reconnect.dart` — `AutoReconnect`: обрив не з волі користувача (Android заморожує застосунок у фоні) →
+  підключитися знову самим, щойно людина повернеться; після довгої паузи «живе» з'єднання перевіряється
+  `SshService.checkAlive`. «Від'єднатися» кнопкою — без автопідключення. Запускається в `main.dart`.
 - `license.dart` — інтерфейс ліцензії; `FreeLicenseService` (open-core: безкоштовно, без ліміту;
   `kMonetizationEnabled=false`). Pro-модуль приватний, у цей репо НЕ входить.
 - `services/` — `ssh_service.dart` (dartssh2: shell/exec/SFTP; `exec` бере код завершення з мітки, яку друкує
